@@ -10,7 +10,7 @@ Ship **21 Lab**, an educational blackjack trainer ("Learn blackjack by playing, 
 - **Deadline:** Fri 2026-09-25, 18:00 ART (hard). Winners announced Sat 2026-09-26, 12:00 ART.
 - **Submit at:** https://nerdearla-app-showcase.webflow.io/#submit (GitHub user + public app URL + short description).
 - **Target categories:** Best Tech (primary), Best Design, Best in Show.
-- **Positioning:** educational strategy trainer. No real money, no betting, no casino aesthetic.
+- **Positioning:** educational strategy trainer. No real money, no betting, no chips. Visually it should feel like sitting at a real casino blackjack table (owner decision, 2026-09-23).
 
 ## 2. Verified Constraints (checked 2026-09-23)
 
@@ -56,6 +56,7 @@ Ship **21 Lab**, an educational blackjack trainer ("Learn blackjack by playing, 
 | D6 | Per-player rate limit on coach calls, stored in D1 | The key is paid by the author |
 | D7 | The app must work fully if the AI is unavailable | AI is an enhancement, not the core |
 | D8 | Open directly into a playable hand; no marketing landing page | "The game is the onboarding" |
+| D10 | Real casino-table look (green felt, padded rail, gold felt print "BLACKJACK PAYS 3 TO 2" / "DEALER MUST STAND ON ALL 17s"), still no money or chips | Owner feedback after first UI pass: must feel like playing at a casino table |
 | D9 | Vercel AI SDK with an OpenAI-compatible provider pointed at Command Code | Handles streaming and the tool loop; edge-compatible |
 
 ## 4. Architecture
@@ -112,11 +113,27 @@ Deliver in order. The app must stay deployable after every phase.
 - [x] (Low priority) Test hardening: undefined-weight test should assert distribution; add miss-path explain tests (hard 16 vs 10, 6-6 vs 4); stiff-hand-hit miss text should say "hit"; surface weight errors through generateScenario
 
 ### Phase 2 — Playable core (Thu 24 AM)
+
+**Current state (2026-09-23, end of session 1). Read this first.**
+- Phase 2a UI is built but **NOT committed and NOT reviewed** (working tree):
+  - `src/features/practice/*` (PracticeScreen, Table, PlayingCard, CardBack, ActionBar, FeedbackPanel, SessionStatsPanel, usePracticeSession, sessionStats + tests, types with a `DecisionRecord` seam for Phase 2b).
+  - `src/app/{page,layout}.tsx`, `src/app/globals.css` (casino-table theme), `package.json` (+ `motion`, `@phosphor-icons/react`), unused `public/*.svg` removed.
+  - `src/blackjack/explain.ts` + tests: explanations match the user's actual action; a full sweep test guarantees no generic fallback message. 146 tests pass, lint/tsc/build clean.
+  - `CLAUDE.md`: Next.js 16 agent-rules block (auto-added by `next dev`; keep it).
+- Design exploration in progress (uncommitted `design-mockups/`, see `docs/design/mockup-briefs.md`):
+  - Built: directions A-D (mobile + desktop, animated). Owner chose **E = A + B combination**, and also asked for **F = pixel art**. E and F are NOT built yet (agents hit usage limits). Briefs are in `docs/design/mockup-briefs.md`.
+- Next steps, in order:
+  1. Build mockups E and F per the brief, show them to the owner, get a final pick.
+  2. Apply the chosen design to `src/features/practice/*` (replace the current casino-table styling), including the motivating animation sequence and gamification (XP, ranks, daily goal, skill map) where feasible.
+  3. Run the RDD review (`gentle-ai review status ...`), then commit Phase 2a (conventional commits, no AI attribution).
+  4. Phase 2b: anonymous player cookie + persist decisions to D1 via the `onDecision` seam.
+- Local servers used during design: `npm run dev` (port 3000) and `python3 -m http.server 4000` in `design-mockups/`.
+- Competitive landscape (researched): Veintiuno, Blackjack 21 Strategy Trainer, Blackjack Trainer 101, Blackjack Ace, basicstrategy.app, learn-blackjack.com, plus casino-affiliate simulators. Our differentiators: AI coach grounded in the deterministic engine + Monte Carlo EV, gamification, adaptive training, zero-friction web, product-grade design.
 - [ ] Anonymous player cookie + `players` row
-- [ ] Practice screen: dealer at the top, player hand, large action buttons, mobile-first
-- [ ] Decision flow: evaluate → feedback ("Perfect move" / "Not quite") → next hand
+- [~] Practice screen: dealer at the top, player hand, large action buttons, mobile-first (built, uncommitted; final design pending)
+- [~] Decision flow: evaluate → feedback ("Perfect move" / "Not quite") → next hand (built, uncommitted)
 - [ ] Persist every decision in `decisions`
-- [ ] Card deal animations and feedback microinteractions
+- [~] Card deal animations and feedback microinteractions (basic version built; richer sequence pending design pick)
 
 ### Phase 3 — Stats & Skill Map (Thu 24 PM)
 - [ ] Stats API: totals, accuracy, current and best streak, strongest and weakest category
@@ -162,3 +179,5 @@ Append one line per session: date, what was done, and what comes next.
 - 2026-09-23: Phase 1 engine committed (74cde93, 93 tests, review approved). Follow-up fixes for 3 non-blocking findings in progress. Next: Phase 2 (playable core).
 - 2026-09-23: Engine fixes committed (4a311bf, 117 tests, review approved). Phase 1 complete. Next: Phase 2 (playable core).
 - 2026-09-23: Test hardening + lint/vitest config fixed (129 tests, lint clean, review approved). Next: Phase 2 (playable core).
+- 2026-09-23: Phase 2a first UI pass reviewed via screenshots. Owner redirected visuals to a real casino-table feel (D10). Redesign + 3 bug fixes (hydration mismatch, miss explanation assuming the wrong action, premature weakest spot) in progress.
+- 2026-09-23: Session 1 end. Phase 2a UI built + explanation fixes (uncommitted, unreviewed). Mockups A-D done; owner picked E (A+B) and requested F (pixel art), both pending. See Phase 2 "Current state" and docs/design/mockup-briefs.md.
