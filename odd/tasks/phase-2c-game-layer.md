@@ -34,7 +34,7 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 ## Delivery
 - Strategy: `ask-on-risk` → owner chose **feature-branch-chain** (2026-09-23). One branch per task, stacked: `feat/phase-2a-pixel-arcade` → `feat/2c-t1-hand-resolution` → `feat/2c-t2-run-mode` → `feat/2c-t3-session-reducer` → `feat/2c-t4-sound` → `feat/2c-t5-game-ui`. Each PR targets the previous branch; merge in order.
 - Forecast: ~1200–1600 authored changed lines across T1–T5.
-- Last reviewed boundary: 05da0b7.
+- Last reviewed boundary: 6df07eb (T1 review lineage review-7659ea5ddda7d84c approved + acknowledged).
 
 ## Route per task
 | Task | Route | Trigger evidence |
@@ -44,6 +44,7 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 ## Progress
 - 2026-09-23: Document created. Owner accepted Pixel Arcade visuals. Chain strategy: feature-branch-chain.
 - 2026-09-23: T1 done (delegated writer): 266bf82 `resolveHand`/`dealHoleCard` (peek-safe hole card, first action exact then basic-strategy auto-play, split aces one card each per rules, S17 dealer, steps for animation); 842d140 stronger explain sweep test exposed and fixed the never-split-tens perfect message not naming stand. RED/GREEN observed; 162 tests, tsc, lint clean. Assess: medium, review due (slice_budget_reached, 681 lines from 05da0b7).
+- 2026-09-23: T1 review approved (reliability lens). Non-blocking follow-ups: playToCompletion treats any non-stand/double action as hit (throw on unexpected action; test a split hand receiving a matching card); untested H17 dealer and non-restricted split-aces branches; unbounded dealHoleCard redraw (bound and throw).
 
 ## Next step
-T2 on `feat/2c-t2-run-mode` (after T1 review).
+T1 review follow-ups on `feat/2c-t1-hand-resolution`, then T2 on `feat/2c-t2-run-mode`.
