@@ -34,7 +34,7 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 ## Delivery
 - Strategy: `ask-on-risk` → owner chose **feature-branch-chain** (2026-09-23). One branch per task, stacked: `feat/phase-2a-pixel-arcade` → `feat/2c-t1-hand-resolution` → `feat/2c-t2-run-mode` → `feat/2c-t3-session-reducer` → `feat/2c-t4-sound` → `feat/2c-t5-game-ui`. Each PR targets the previous branch; merge in order.
 - Forecast: ~1200–1600 authored changed lines across T1–T5.
-- Last reviewed boundary: 6df07eb (T1 review lineage review-7659ea5ddda7d84c approved + acknowledged).
+- Last reviewed boundary: 785ce19 (T1-fix + T2 review lineage review-d032dc5df892a740 approved + acknowledged; earlier T1 lineage review-7659ea5ddda7d84c).
 
 ## Route per task
 | Task | Route | Trigger evidence |
@@ -47,6 +47,7 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 - 2026-09-23: T1 review approved (reliability lens). Non-blocking follow-ups: playToCompletion treats any non-stand/double action as hit (throw on unexpected action; test a split hand receiving a matching card); untested H17 dealer and non-restricted split-aces branches; unbounded dealHoleCard redraw (bound and throw).
 - 2026-09-23: T1 follow-ups done on `feat/2c-t1-hand-resolution` (16eb4d8): explicit action switch that throws on unexpected actions (optimalAction never returns split after a split, pinned by test), H17 and unrestricted split-aces tests, bounded hole-card redraw (RED observed as a hang). Pinned-branch tests passed on first run (no RED, existing behavior).
 - 2026-09-23: T2 done on `feat/2c-t2-run-mode`: 580eb5a `src/training/run.ts` (3 lives, BASE_POINTS 100, multiplier x2/x3/x4 at streak 3/6/9, game over, restart keeps bestScore; bestScore updates on game over), ab5f307 shared XP constants. RED/GREEN observed; 179 tests, tsc, lint clean. Assess from 6df07eb: medium, review due (434 lines).
+- 2026-09-23: T1-fix + T2 review approved. Follow-ups: restart mid-run dropped the live score from bestScore — decided (parent, owner may override) that an abandoned run still counts, so restart folds `max(bestScore, score)`; add a test that game over keeps a higher stored best. Both folded into T3.
 
 ## Next step
 T3 on `feat/2c-t3-session-reducer` (after the T1-fix + T2 review).
