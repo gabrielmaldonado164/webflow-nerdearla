@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated build/type output (OpenNext/Cloudflare/Wrangler), never
+    // hand-authored: linting it just surfaces noise from bundled/generated
+    // code we don't control.
+    ".open-next/**",
+    ".wrangler/**",
+    "worker-configuration.d.ts",
   ]),
 ]);
 

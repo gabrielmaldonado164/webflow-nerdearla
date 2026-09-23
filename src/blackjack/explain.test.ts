@@ -117,6 +117,54 @@ describe("explainDecision", () => {
       expect(result.message).toMatch(ACTION_KEYWORD[optimalAction]);
     });
 
+    // A "wrong" action to feed as userAction so the result is a miss. Split
+    // hands can also legally be hit, so "hit" always works as the miss.
+    const WRONG_ACTION: Record<Action, Action> = {
+      hit: "stand",
+      stand: "hit",
+      double: "hit",
+      split: "hit",
+    };
+
+    it.each(cases)("$name explains a miss by naming the optimal action", ({ playerCards, dealerUpcard, optimalAction }) => {
+      const result = explainDecision({
+        playerCards: [card(playerCards[0]), card(playerCards[1])],
+        dealerUpcard: card(dealerUpcard),
+        userAction: WRONG_ACTION[optimalAction],
+        optimalAction,
+      });
+      expect(result.isCorrect).toBe(false);
+      expect(result.message).toMatch(ACTION_KEYWORD[optimalAction]);
+      const opposite = OPPOSITE_KEYWORD[optimalAction];
+      if (opposite) {
+        expect(result.message).not.toMatch(opposite);
+      }
+    });
+
+    it("explains missing a hit on hard 16 vs 10 by recommending hitting, not standing", () => {
+      const result = explainDecision({
+        playerCards: [card("10"), card("6")],
+        dealerUpcard: card("10"),
+        userAction: "stand",
+        optimalAction: "hit",
+      });
+      expect(result.isCorrect).toBe(false);
+      expect(result.message.toLowerCase()).toContain("hit");
+      expect(result.message.toLowerCase()).not.toContain("stand");
+    });
+
+    it("explains missing a split on 6-6 vs 4 by recommending splitting, not standing", () => {
+      const result = explainDecision({
+        playerCards: [card("6"), card("6")],
+        dealerUpcard: card("4"),
+        userAction: "hit",
+        optimalAction: "split",
+      });
+      expect(result.isCorrect).toBe(false);
+      expect(result.message.toLowerCase()).toContain("split");
+      expect(result.message.toLowerCase()).not.toContain("stand");
+    });
+
     it("stiff hand vs a strong dealer card explains hitting, not standing", () => {
       const result = explainDecision({
         playerCards: [card("10"), card("6")],

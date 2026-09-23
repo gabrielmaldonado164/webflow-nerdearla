@@ -65,11 +65,11 @@ const TEMPLATES: Record<SituationFamily, { perfect: string; miss: string }> = {
   },
   "stiff-hand-stand": {
     perfect: "Against a dealer bust card, standing lets the dealer take the risk instead of you.",
-    miss: "Stiff hands like this do best against low dealer cards, let the dealer risk busting first.",
+    miss: "Stiff hands like this do best when you stand against low dealer cards, letting the dealer risk busting first.",
   },
   "stiff-hand-hit": {
     perfect: "The dealer will likely make 17 or more here, so hitting gives this weak total a better chance.",
-    miss: "Against a strong dealer card the dealer will likely make 17+, so this 12-16 needs another card more often than not.",
+    miss: "Against a strong dealer card the dealer will likely make 17+, so this 12-16 needs a hit more often than not.",
   },
   general: {
     perfect: "That is exactly the play basic strategy recommends for this situation.",

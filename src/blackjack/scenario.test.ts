@@ -71,11 +71,20 @@ describe("pickWeightedCategory", () => {
   });
 
   it("ignores an explicitly undefined weight instead of letting it override the default", () => {
+    // Regression guard: an earlier implementation resolved weights with
+    // `{ ...DEFAULT_WEIGHTS, ...weights }`, so an explicit `hard: undefined`
+    // clobbered the default with `undefined`, making the total `NaN` and
+    // every roll fall through to "pair". Asserting on the distribution
+    // (rather than just "category is one of hard/soft/pair", which can
+    // never fail) catches that regression: with the old spread-based
+    // logic, "hard" would never appear here.
     const rng = createRng(3);
-    for (let i = 0; i < 100; i++) {
-      const category = pickWeightedCategory(rng, { hard: undefined, soft: 1, pair: 1 });
-      expect(["hard", "soft", "pair"]).toContain(category);
+    const seen = { hard: false, soft: false, pair: false };
+    for (let i = 0; i < 200; i++) {
+      seen[pickWeightedCategory(rng, { hard: undefined, soft: 0 })] = true;
     }
+    expect(seen.hard).toBe(true);
+    expect(seen.soft).toBe(false);
   });
 
   it("throws when all weights are zero", () => {
@@ -96,5 +105,31 @@ describe("pickWeightedCategory", () => {
     expect(() =>
       pickWeightedCategory(createRng(1), { hard: Number.POSITIVE_INFINITY, soft: 1, pair: 1 }),
     ).toThrow();
+  });
+});
+
+describe("generateScenario weight validation", () => {
+  it("throws a descriptive error when all category weights are zero", () => {
+    expect(() =>
+      generateScenario(createRng(1), DEFAULT_RULES, {
+        weights: { hard: 0, soft: 0, pair: 0 },
+      }),
+    ).toThrow(/weights must not all be zero/i);
+  });
+
+  it("throws a descriptive error naming the invalid weight for a negative value", () => {
+    expect(() =>
+      generateScenario(createRng(1), DEFAULT_RULES, {
+        weights: { hard: -1, soft: 1, pair: 1 },
+      }),
+    ).toThrow(/"hard" weight must be a finite number >= 0/);
+  });
+
+  it("throws a descriptive error naming the invalid weight for a NaN value", () => {
+    expect(() =>
+      generateScenario(createRng(1), DEFAULT_RULES, {
+        weights: { hard: 1, soft: Number.NaN, pair: 1 },
+      }),
+    ).toThrow(/"soft" weight must be a finite number >= 0/);
   });
 });
