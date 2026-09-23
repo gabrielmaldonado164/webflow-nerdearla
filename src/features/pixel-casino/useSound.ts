@@ -6,9 +6,9 @@
  * yet — that's T5's job.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useSyncExternalStore } from "react";
 
-import { loadMuted, saveMuted } from "./preferences";
+import { DEFAULT_MUTED, loadMuted, saveMuted } from "./preferences";
 import { createSoundPlayer, type CueNotesOptions, type SoundCue, type SoundPlayer } from "./sound";
 
 export interface UseSound {
@@ -18,19 +18,41 @@ export interface UseSound {
   play: (cue: SoundCue, options?: CueNotesOptions) => void;
 }
 
+// `muted` reads a real external system (`localStorage`, via `preferences.ts`),
+// so it's read through `useSyncExternalStore` rather than a `useState` primed
+// from an effect: the server snapshot always returns the fixed default (so
+// the server and first client render agree — no hydration mismatch from a
+// player who has muted before), and every mounted `useSound()` re-renders
+// together when `toggleMuted` changes it.
+const mutedListeners = new Set<() => void>();
+
+function subscribeToMuted(onStoreChange: () => void): () => void {
+  mutedListeners.add(onStoreChange);
+  return () => mutedListeners.delete(onStoreChange);
+}
+
+function notifyMutedListeners(): void {
+  for (const listener of mutedListeners) listener();
+}
+
+function getMutedSnapshot(): boolean {
+  return loadMuted();
+}
+
+function getMutedServerSnapshot(): boolean {
+  return DEFAULT_MUTED;
+}
+
 export function useSound(): UseSound {
-  const [muted, setMuted] = useState<boolean>(() => loadMuted());
+  const muted = useSyncExternalStore(subscribeToMuted, getMutedSnapshot, getMutedServerSnapshot);
   // Lazily created on the first `play()` call, i.e. after a real user
   // gesture — never eagerly, since browsers require that before audio
   // can actually start (see `createSoundPlayer`).
   const playerRef = useRef<SoundPlayer | null>(null);
 
   const toggleMuted = useCallback(() => {
-    setMuted((wasMuted) => {
-      const nextMuted = !wasMuted;
-      saveMuted(nextMuted);
-      return nextMuted;
-    });
+    saveMuted(!loadMuted());
+    notifyMutedListeners();
   }, []);
 
   const play = useCallback(

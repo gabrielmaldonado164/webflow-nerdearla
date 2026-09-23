@@ -19,7 +19,8 @@ export interface StorageLike {
 const MUTED_KEY = "pixel-casino:muted";
 const BEST_SCORE_KEY = "pixel-casino:best-score";
 
-const DEFAULT_MUTED = false;
+/** The muted state before `loadMuted` has run (e.g. a hook's initial render, server or client). */
+export const DEFAULT_MUTED = false;
 const DEFAULT_BEST_SCORE = 0;
 
 function defaultStorage(): StorageLike | undefined {
