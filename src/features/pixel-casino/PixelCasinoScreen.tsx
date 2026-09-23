@@ -163,9 +163,12 @@ export function PixelCasinoScreen() {
 
   // Schedules the reveal timeline (extra cards landing, the hole-card
   // flip, then the outcome banner) and their sound cues. `playRef` keeps
-  // `play` out of the dependency list on purpose (see above).
+  // `play` out of the dependency list on purpose (see above). A decision
+  // that ends the run freezes the table: nothing is revealed or played
+  // behind the game-over overlay.
+  const runOver = run.status === "over";
   useEffect(() => {
-    if (!feedback) return;
+    if (!feedback || runOver) return;
     const timing = reduceMotion ? INSTANT_REVEAL_TIMING : DEFAULT_REVEAL_TIMING;
     const steps = feedback.resolution.steps;
     const schedule = buildRevealSchedule(steps, timing);
@@ -200,14 +203,15 @@ export function PixelCasinoScreen() {
     return () => {
       timers.forEach((id) => window.clearTimeout(id));
     };
-  }, [feedback, reduceMotion]);
+  }, [feedback, reduceMotion, runOver]);
 
   // Immediate decision-grading feedback: correct/mistake sound, plus
   // mistake juice (screen shake is CSS-only via .stageMiss below;
   // vibration is skipped under reduced motion, same as the shake).
   useEffect(() => {
     if (!feedback) return;
-    playRef.current(feedback.isCorrect ? "correct" : "mistake");
+    // The game-over cue (below) replaces the mistake cue on the final miss.
+    if (!runOver) playRef.current(feedback.isCorrect ? "correct" : "mistake");
     if (!feedback.isCorrect && !reduceMotion) {
       try {
         navigator.vibrate?.(120);
@@ -215,7 +219,7 @@ export function PixelCasinoScreen() {
         // Unsupported, blocked, or a non-secure context — no-op.
       }
     }
-  }, [feedback, reduceMotion]);
+  }, [feedback, reduceMotion, runOver]);
 
   // --- Combo multiplier: pulse (visual, computed during render) + sound (effect) ---
   const [prevMultiplier, setPrevMultiplier] = useState(run.multiplier);
@@ -404,9 +408,9 @@ export function PixelCasinoScreen() {
                 which are anchored to each player hand's own cards instead of
                 this stage-centered stamp (see OutcomeBanner). */}
             <AnimatePresence>
-              {feedback && !showOutcome && <motion.div key={`stamp-${stats.handsPlayed}`} className={`${styles.resultStamp} ${feedback.isCorrect ? styles.resultCorrect : styles.resultIncorrect}`} initial={reduceMotion ? false : { opacity: 0, scale: 2.1, rotate: -8 }} animate={{ opacity: 1, scale: 1, rotate: -5 }} exit={reduceMotion ? undefined : { opacity: 0, scale: 0.85 }} transition={{ type: "spring", stiffness: 290, damping: 17 }} aria-hidden="true">{feedback.isCorrect ? "PERFECT!" : "KEEP LEARNING"}</motion.div>}
+              {feedback && !showOutcome && !isGameOver && <motion.div key={`stamp-${stats.handsPlayed}`} className={`${styles.resultStamp} ${feedback.isCorrect ? styles.resultCorrect : styles.resultIncorrect}`} initial={reduceMotion ? false : { opacity: 0, scale: 2.1, rotate: -8 }} animate={{ opacity: 1, scale: 1, rotate: -5 }} exit={reduceMotion ? undefined : { opacity: 0, scale: 0.85 }} transition={{ type: "spring", stiffness: 290, damping: 17 }} aria-hidden="true">{feedback.isCorrect ? "PERFECT!" : "KEEP LEARNING"}</motion.div>}
             </AnimatePresence>
-            {feedback?.isCorrect && !showOutcome && <div className={styles.rewardParticles} key={`burst-${stats.handsPlayed}`} aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <Sparkle key={index} weight="fill" />)}</div>}
+            {feedback?.isCorrect && !showOutcome && !isGameOver && <div className={styles.rewardParticles} key={`burst-${stats.handsPlayed}`} aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <Sparkle key={index} weight="fill" />)}</div>}
             <AnimatePresence>
               {isGameOver && (
                 <GameOverOverlay
@@ -420,7 +424,7 @@ export function PixelCasinoScreen() {
             </AnimatePresence>
           </section>
 
-          <section className={styles.console} aria-label="Choose your move">
+          <section className={`${styles.console} ${isGameOver ? styles.consoleLocked : ""}`} aria-label="Choose your move" inert={isGameOver}>
             <div className={styles.consoleTop}><div><small>CHOOSE YOUR MOVE</small><strong>{scenario ? `${CATEGORY_LABEL[scenario.category]} · ${scenario.label}` : "Dealing a hand..."}</strong></div>{!feedback && <button type="button" className={styles.clueButton} disabled={!scenario || Boolean(pendingAction)} aria-expanded={showClue} onClick={() => setShowClue((value) => !value)}><BookOpen weight="fill" aria-hidden="true" /> {showClue ? "Hide clue" : "Need a clue?"}</button>}</div>
             {showClue && scenario && !feedback && <p className={styles.clue}><Sparkle weight="fill" aria-hidden="true" />{CLUES[scenario.category]}</p>}
             <AnimatePresence mode="wait">
