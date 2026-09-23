@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { isBlackjack } from "./hand";
 import { createRng } from "./rng";
 import { DEFAULT_RULES } from "./rules";
-import { generateScenario } from "./scenario";
+import { generateScenario, pickWeightedCategory } from "./scenario";
 
 describe("generateScenario", () => {
   it("is deterministic for a given seed", () => {
@@ -48,5 +48,53 @@ describe("generateScenario", () => {
         "soft",
       );
     }
+  });
+});
+
+describe("pickWeightedCategory", () => {
+  it("never produces a zero-weight category", () => {
+    const rng = createRng(13);
+    for (let i = 0; i < 500; i++) {
+      const category = pickWeightedCategory(rng, { hard: 1, soft: 0, pair: 1 });
+      expect(category).not.toBe("soft");
+    }
+  });
+
+  it("lets a heavily weighted category dominate", () => {
+    const rng = createRng(21);
+    const counts = { hard: 0, soft: 0, pair: 0 };
+    const total = 500;
+    for (let i = 0; i < total; i++) {
+      counts[pickWeightedCategory(rng, { hard: 100, soft: 1, pair: 1 })]++;
+    }
+    expect(counts.hard / total).toBeGreaterThan(0.9);
+  });
+
+  it("ignores an explicitly undefined weight instead of letting it override the default", () => {
+    const rng = createRng(3);
+    for (let i = 0; i < 100; i++) {
+      const category = pickWeightedCategory(rng, { hard: undefined, soft: 1, pair: 1 });
+      expect(["hard", "soft", "pair"]).toContain(category);
+    }
+  });
+
+  it("throws when all weights are zero", () => {
+    expect(() => pickWeightedCategory(createRng(1), { hard: 0, soft: 0, pair: 0 })).toThrow();
+  });
+
+  it("throws on a negative weight", () => {
+    expect(() => pickWeightedCategory(createRng(1), { hard: -1, soft: 1, pair: 1 })).toThrow();
+  });
+
+  it("throws on a NaN weight", () => {
+    expect(() =>
+      pickWeightedCategory(createRng(1), { hard: Number.NaN, soft: 1, pair: 1 }),
+    ).toThrow();
+  });
+
+  it("throws on a non-finite weight", () => {
+    expect(() =>
+      pickWeightedCategory(createRng(1), { hard: Number.POSITIVE_INFINITY, soft: 1, pair: 1 }),
+    ).toThrow();
   });
 });

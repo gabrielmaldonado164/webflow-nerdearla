@@ -157,6 +157,32 @@ function playSplitHands(
 }
 
 /**
+ * Validates that `iterations` is a positive integer, and that `action` is
+ * actually legal for `playerCards` under `rules` (delegating legality to
+ * `availableActions` so the rules stay defined in one place).
+ */
+function validateSimulateEvInputs(
+  playerCards: readonly Card[],
+  action: Action,
+  rules: GameRules,
+  iterations: number,
+): void {
+  if (!Number.isInteger(iterations) || iterations <= 0) {
+    throw new RangeError(
+      `iterations must be a positive integer, received ${iterations}`,
+    );
+  }
+
+  const legalActions = availableActions(playerCards, rules);
+  if (!legalActions.includes(action)) {
+    throw new Error(
+      `"${action}" is not a legal action for this hand (${playerCards.length} card(s)); ` +
+        `available actions are: ${legalActions.join(", ")}`,
+    );
+  }
+}
+
+/**
  * Runs a Monte Carlo simulation of the given first action's EV, expressed
  * as profit per unit of the original bet (a double counts 2x, a split
  * sums the profit of both resulting hands).
@@ -168,6 +194,7 @@ export function simulateEV(
   options: SimulateEvOptions,
 ): SimulateEvResult {
   const { rng, rules, iterations } = options;
+  validateSimulateEvInputs(playerCards, action, rules, iterations);
   const dealerUpValue = rankValue(dealerUpcard.rank);
 
   let totalProfit = 0;

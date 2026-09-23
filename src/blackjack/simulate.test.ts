@@ -113,4 +113,79 @@ describe("simulateAllActions", () => {
     const actionNames = results.map((r) => r.action);
     expect(actionNames).toEqual(expect.arrayContaining(["hit", "stand", "split"]));
   });
+
+  it("never simulates an action unavailable on the hand", () => {
+    // A hard, non-pair, 3-card hand: only hit/stand are available.
+    const hand = [card("2"), card("3"), card("4")];
+    const dealerUpcard = card("6");
+    const results = simulateAllActions(hand, dealerUpcard, {
+      rng: createRng(5),
+      rules: DEFAULT_RULES,
+      iterations: 100,
+    });
+    const actionNames = results.map((r) => r.action);
+    expect(actionNames.sort()).toEqual(["hit", "stand"]);
+  });
+});
+
+describe("simulateEV input validation", () => {
+  it("throws a RangeError for zero iterations", () => {
+    expect(() =>
+      simulateEV([card("K"), card("9")], card("6"), "stand", {
+        rng: createRng(1),
+        rules: DEFAULT_RULES,
+        iterations: 0,
+      }),
+    ).toThrow(RangeError);
+  });
+
+  it("throws a RangeError for negative iterations", () => {
+    expect(() =>
+      simulateEV([card("K"), card("9")], card("6"), "stand", {
+        rng: createRng(1),
+        rules: DEFAULT_RULES,
+        iterations: -5,
+      }),
+    ).toThrow(RangeError);
+  });
+
+  it("throws a RangeError for non-integer iterations", () => {
+    expect(() =>
+      simulateEV([card("K"), card("9")], card("6"), "stand", {
+        rng: createRng(1),
+        rules: DEFAULT_RULES,
+        iterations: 2.5,
+      }),
+    ).toThrow(RangeError);
+  });
+
+  it("throws when splitting a non-pair hand", () => {
+    expect(() =>
+      simulateEV([card("K"), card("9")], card("6"), "split", {
+        rng: createRng(1),
+        rules: DEFAULT_RULES,
+        iterations: 100,
+      }),
+    ).toThrow(/split/i);
+  });
+
+  it("throws when splitting a hand with more than two cards", () => {
+    expect(() =>
+      simulateEV([card("6"), card("6"), card("2")], card("6"), "split", {
+        rng: createRng(1),
+        rules: DEFAULT_RULES,
+        iterations: 100,
+      }),
+    ).toThrow(/split/i);
+  });
+
+  it("throws when doubling a hand with more than two cards", () => {
+    expect(() =>
+      simulateEV([card("2"), card("3"), card("4")], card("6"), "double", {
+        rng: createRng(1),
+        rules: DEFAULT_RULES,
+        iterations: 100,
+      }),
+    ).toThrow(/double/i);
+  });
 });

@@ -25,11 +25,13 @@ export interface ExplainDecisionResult {
 type SituationFamily =
   | "split-aces"
   | "split-eights"
+  | "split-pair"
   | "never-split-tens"
   | "never-split-fives"
   | "soft-double"
   | "double-10-11"
-  | "stiff-hand"
+  | "stiff-hand-stand"
+  | "stiff-hand-hit"
   | "general";
 
 const TEMPLATES: Record<SituationFamily, { perfect: string; miss: string }> = {
@@ -40,6 +42,10 @@ const TEMPLATES: Record<SituationFamily, { perfect: string; miss: string }> = {
   "split-eights": {
     perfect: "Splitting 8s turns a rough 16 into two hands with real potential.",
     miss: "A pair of 8s is a weak 16 in disguise, splitting gives you two better hands instead.",
+  },
+  "split-pair": {
+    perfect: "Splitting this pair turns one so-so hand into two hands with a better shot each.",
+    miss: "This pair plays better split into two separate hands than kept as one, give it a try next time.",
   },
   "never-split-tens": {
     perfect: "Two ten-value cards already make 20, no need to break up a great hand.",
@@ -57,9 +63,13 @@ const TEMPLATES: Record<SituationFamily, { perfect: string; miss: string }> = {
     perfect: "Doubling on a strong total like this squeezes out extra value before the dealer plays.",
     miss: "Totals of 10 or 11 are prime spots to double, one more card is likely to make a great hand.",
   },
-  "stiff-hand": {
+  "stiff-hand-stand": {
     perfect: "Against a dealer bust card, standing lets the dealer take the risk instead of you.",
     miss: "Stiff hands like this do best against low dealer cards, let the dealer risk busting first.",
+  },
+  "stiff-hand-hit": {
+    perfect: "The dealer will likely make 17 or more here, so hitting gives this weak total a better chance.",
+    miss: "Against a strong dealer card the dealer will likely make 17+, so this 12-16 needs another card more often than not.",
   },
   general: {
     perfect: "That is exactly the play basic strategy recommends for this situation.",
@@ -77,6 +87,10 @@ function situationFamily(
     if (value === 8) return "split-eights";
     if (value === 10) return "never-split-tens";
     if (value === 5) return "never-split-fives";
+    // Any other pair that the strategy engine says to split (e.g. 6-6, 7-7)
+    // must be explained as a split, checked before the stiff-hand branch
+    // below so a splittable stiff pair isn't misexplained as standing.
+    if (optimalAction === "split") return "split-pair";
   }
 
   const { total, isSoft } = handValue(playerCards);
@@ -84,7 +98,12 @@ function situationFamily(
   if (!isSoft && (total === 10 || total === 11) && optimalAction === "double") {
     return "double-10-11";
   }
-  if (!isSoft && total >= 12 && total <= 16) return "stiff-hand";
+  if (!isSoft && total >= 12 && total <= 16) {
+    // The family follows the strategy engine's actual recommendation
+    // rather than assuming standing is always correct: hard 12-16 vs a
+    // strong dealer card (or hard 12 vs 2-3) is a hit, not a stand.
+    return optimalAction === "hit" ? "stiff-hand-hit" : "stiff-hand-stand";
+  }
 
   return "general";
 }

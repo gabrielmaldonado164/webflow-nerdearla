@@ -40,15 +40,41 @@ const DEFAULT_WEIGHTS: Required<CategoryWeights> = { hard: 1, soft: 1, pair: 1 }
 /** Maximum attempts before giving up on matching the requested category. */
 const MAX_ATTEMPTS = 1000;
 
-function pickWeightedCategory(
+function resolveWeight(
+  key: keyof CategoryWeights,
+  weights: CategoryWeights,
+): number {
+  const value = weights[key];
+  const resolved = value === undefined ? DEFAULT_WEIGHTS[key] : value;
+  if (!Number.isFinite(resolved) || resolved < 0) {
+    throw new Error(
+      `"${key}" weight must be a finite number >= 0, received ${resolved}`,
+    );
+  }
+  return resolved;
+}
+
+/**
+ * Picks a category at random, proportionally to the given weights
+ * (falling back to `DEFAULT_WEIGHTS` for any category left unset, and
+ * ignoring an explicitly `undefined` entry the same way). Every weight
+ * must be a finite number >= 0, and at least one must be > 0.
+ */
+export function pickWeightedCategory(
   rng: () => number,
   weights: CategoryWeights,
 ): ScenarioCategory {
-  const resolved = { ...DEFAULT_WEIGHTS, ...weights };
-  const total = resolved.hard + resolved.soft + resolved.pair;
+  const hard = resolveWeight("hard", weights);
+  const soft = resolveWeight("soft", weights);
+  const pair = resolveWeight("pair", weights);
+  const total = hard + soft + pair;
+  if (total <= 0) {
+    throw new Error("category weights must not all be zero");
+  }
+
   const roll = rng() * total;
-  if (roll < resolved.hard) return "hard";
-  if (roll < resolved.hard + resolved.soft) return "soft";
+  if (roll < hard) return "hard";
+  if (roll < hard + soft) return "soft";
   return "pair";
 }
 
