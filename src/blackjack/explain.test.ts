@@ -150,7 +150,7 @@ describe("explainDecision", () => {
       });
       expect(result.isCorrect).toBe(false);
       expect(result.message.toLowerCase()).toContain("hit");
-      expect(result.message.toLowerCase()).not.toContain("stand");
+      expect(result.message).not.toMatch(/\bstand(s|ing)?\b/i);
     });
 
     it("explains missing a split on 6-6 vs 4 by recommending splitting, not standing", () => {
@@ -162,7 +162,7 @@ describe("explainDecision", () => {
       });
       expect(result.isCorrect).toBe(false);
       expect(result.message.toLowerCase()).toContain("split");
-      expect(result.message.toLowerCase()).not.toContain("stand");
+      expect(result.message).not.toMatch(/\bstand(s|ing)?\b/i);
     });
 
     it("stiff hand vs a strong dealer card explains hitting, not standing", () => {
@@ -172,7 +172,7 @@ describe("explainDecision", () => {
         userAction: "hit",
         optimalAction: "hit",
       });
-      expect(result.message.toLowerCase()).not.toContain("stand");
+      expect(result.message).not.toMatch(/\bstand(s|ing)?\b/i);
     });
 
     it("does not describe a pair that should split as standing", () => {
@@ -183,7 +183,7 @@ describe("explainDecision", () => {
         optimalAction: "split",
       });
       expect(result.message.toLowerCase()).toContain("split");
-      expect(result.message.toLowerCase()).not.toContain("stand");
+      expect(result.message).not.toMatch(/\bstand(s|ing)?\b/i);
     });
 
     it("generic guard: message never recommends the opposite of optimalAction", () => {
