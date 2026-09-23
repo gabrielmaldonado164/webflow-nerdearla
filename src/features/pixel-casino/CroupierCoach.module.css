@@ -1,0 +1,15 @@
+.sprite {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.bob {
+  animation: croupierBob 3.6s ease-in-out infinite;
+}
+@keyframes croupierBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bob { animation: none; }
+}
