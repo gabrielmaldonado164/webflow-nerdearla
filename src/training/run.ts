@@ -1,8 +1,11 @@
 /**
  * Run mode: a pure reducer over a session of graded decisions. Lives are
  * lost on wrong decisions; correct decisions build a streak that raises a
- * capped score multiplier. Persistence (e.g. `bestScore` in storage) is
- * the caller's responsibility; this module only computes the next state.
+ * capped score multiplier. An abandoned run still counts toward the best
+ * score: both game over and restart fold the live score into `bestScore`
+ * via `max(bestScore, score)`. Persistence (e.g. `bestScore` in storage)
+ * is the caller's responsibility; this module only computes the next
+ * state.
  */
 
 /** Lives a run starts with. */
@@ -91,11 +94,12 @@ function applyWrongDecision(state: RunState): RunState {
 /**
  * Advances a run's state. Decisions are ignored once the run is over
  * (the same state is returned); `restart` always starts a fresh run,
- * keeping only `bestScore`.
+ * folding the live score into `bestScore` first (`max(bestScore, score)`)
+ * so an abandoned run still counts toward the best.
  */
 export function runReducer(state: RunState, event: RunEvent): RunState {
   if (event.type === "restart") {
-    return createInitialRunState(state.bestScore);
+    return createInitialRunState(Math.max(state.bestScore, state.score));
   }
 
   if (state.status === "over") {

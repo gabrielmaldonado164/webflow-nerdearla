@@ -106,6 +106,18 @@ describe("runReducer", () => {
     expect(state.bestScore).toBe(Math.max(10, BASE_POINTS));
   });
 
+  it("reaching zero lives keeps a higher stored best score when the final score is lower", () => {
+    let state = createInitialRunState(1000);
+    state = runReducer(state, { type: "decision", isCorrect: true }); // score = BASE_POINTS
+    for (let i = 0; i < STARTING_LIVES; i++) {
+      state = runReducer(state, { type: "decision", isCorrect: false });
+    }
+
+    expect(state.status).toBe("over");
+    expect(state.score).toBeLessThan(1000);
+    expect(state.bestScore).toBe(1000);
+  });
+
   it("ignores decisions once the run is over", () => {
     let state = createInitialRunState();
     for (let i = 0; i < STARTING_LIVES; i++) {
@@ -117,14 +129,24 @@ describe("runReducer", () => {
     expect(next).toEqual(state);
   });
 
-  it("restart resets everything except the best score", () => {
+  it("restart folds the live score into the best score, since an abandoned run still counts", () => {
     let state = createInitialRunState(50);
-    state = runReducer(state, { type: "decision", isCorrect: true });
+    state = runReducer(state, { type: "decision", isCorrect: true }); // score = BASE_POINTS (100)
     state = runReducer(state, { type: "decision", isCorrect: false });
+    expect(state.score).toBeGreaterThan(50);
 
     const restarted = runReducer(state, { type: "restart" });
 
-    expect(restarted).toEqual(createInitialRunState(50));
+    expect(restarted).toEqual(createInitialRunState(state.score));
+  });
+
+  it("restart keeps the previous best score when the live score never surpassed it", () => {
+    let state = createInitialRunState(500);
+    state = runReducer(state, { type: "decision", isCorrect: true }); // score = BASE_POINTS (100)
+
+    const restarted = runReducer(state, { type: "restart" });
+
+    expect(restarted).toEqual(createInitialRunState(500));
   });
 
   it("restart after game over keeps the best score recorded at game over", () => {
