@@ -8,7 +8,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Action, Card, ScenarioCategory, Suit } from "@/blackjack";
 import { handValue, rankValue } from "@/blackjack";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
-import { CroupierCoach, type CroupierDisplayPose } from "./CroupierCoach";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { currentHandNumber } from "./handNumber";
 import { Hud } from "./Hud";
@@ -319,8 +318,6 @@ export function PixelCasinoScreen() {
   const splitSelected = feedback?.userAction === "split" || pendingAction === "split";
   const bestAction = feedback && ACTIONS.find(({ id }) => id === feedback.optimalAction)?.label;
   const isGameOver = run.status === "over";
-  const coachPose: CroupierDisplayPose = isGameOver ? "gameOver" : feedback ? (feedback.isCorrect ? "celebrate" : "teach") : "idle";
-  const coachBubble = isGameOver ? "TABLE'S CLOSED!" : feedback ? (feedback.isCorrect ? "NICE READ!" : "LEARN IT!") : "YOUR MOVE!";
 
   return (
     <main className={styles.game}>
@@ -336,7 +333,6 @@ export function PixelCasinoScreen() {
             <div className={styles.roomShade} aria-hidden="true" />
             <div className={styles.overheadLight} aria-hidden="true" />
             <div className={styles.sceneTop}><span>STRATEGY TABLE</span><span>HAND {handNumber.toString().padStart(2, "0")}</span></div>
-            <div className={`${styles.coach} ${feedback?.isCorrect ? styles.coachCelebrate : ""}`} aria-hidden="true"><span className={styles.coachBubble}>{coachBubble}</span><CroupierCoach pose={coachPose} /></div>
             <div className={styles.cardDeck} aria-hidden="true"><i /><i /><i /><i /></div>
 
             <div className={styles.tableShadow} aria-hidden="true" />
