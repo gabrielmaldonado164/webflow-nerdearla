@@ -9,6 +9,7 @@ import type { Action, Card, ScenarioCategory, Suit } from "@/blackjack";
 import { handValue, rankValue } from "@/blackjack";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
 import { GameOverOverlay } from "./GameOverOverlay";
+import { currentHandNumber } from "./handNumber";
 import { Hud } from "./Hud";
 import { keyToCommand } from "./keyboard";
 import { OutcomeBanner } from "./OutcomeBanner";
@@ -313,7 +314,7 @@ export function PixelCasinoScreen() {
   const total = resolution && !isSplit
     ? resolution.playerHands[0].total
     : scenario ? handValue(scenario.playerCards).total : null;
-  const handNumber = stats.handsPlayed + (feedback ? 0 : 1);
+  const handNumber = currentHandNumber(run.decisions, Boolean(feedback));
   const splitSelected = feedback?.userAction === "split" || pendingAction === "split";
   const bestAction = feedback && ACTIONS.find(({ id }) => id === feedback.optimalAction)?.label;
   const isGameOver = run.status === "over";
