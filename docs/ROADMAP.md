@@ -23,9 +23,9 @@ Ship **21 Lab**, an educational blackjack trainer ("Learn blackjack by playing, 
 
 ### Webflow Cloud platform
 - Runtime: **Cloudflare Workers** (V8 isolates, not full Node.js).
-- Next.js **>= 15**, built through OpenNext (`@opennextjs/cloudflare`).
+- Next.js **>= 15** (project uses 16.3), built through OpenNext (`@opennextjs/cloudflare`).
 - **Do not set `basePath` or `assetPrefix`.** Webflow Cloud injects the mount path at build time. Use `process.env.NEXT_PUBLIC_BASE_PATH` for plain `<img>` tags and manual `fetch` calls. `Link` and `next/image` handle it automatically.
-- API routes: `export const runtime = 'edge'` (per the Webflow docs).
+- API routes: use `export const runtime = "nodejs"`. **Not `edge`**: the Webflow docs say `edge`, but on Next 16.3 + `@opennextjs/cloudflare` 1.20 it builds and then returns 500 at runtime (verified 2026-09-23).
 - SQLite = **Cloudflare D1**, declared in `wrangler.json` under `d1_databases` (`binding`, `database_name`, `database_id`, `migrations_dir`). Migrations are applied automatically on deploy.
 - Access bindings via `getCloudflareContext()`, always called inside a function.
 - ORM: **Drizzle**.
@@ -89,12 +89,13 @@ Strategy categories: `hard`, `soft`, `pair`, and the action dimensions `double` 
 Deliver in order. The app must stay deployable after every phase.
 
 ### Phase 0 — Platform spike (Wed 23) — de-risk first
-- [ ] Scaffold Next.js 15 + TypeScript + Tailwind + Vitest
-- [ ] Add `@opennextjs/cloudflare`, `wrangler.json` with the D1 binding, and Drizzle
-- [ ] Create a health API route that writes and reads a row in D1
-- [ ] `webflow auth login` and the first `webflow cloud deploy`
+- [x] Scaffold Next.js 15 + TypeScript + Tailwind + Vitest
+- [x] Add `@opennextjs/cloudflare`, `wrangler.json` with the D1 binding, and Drizzle
+- [x] Create a health API route that writes and reads a row in D1
+- [x] `webflow auth login`
+- [ ] First deploy: the user runs `npx @webflow/webflow-cli apps deploy` interactively once (project app; this sets the workspace ID in `webflow.json`)
 - [ ] Confirm the public URL works, D1 persists, and migrations auto-apply
-- [ ] First commit and push to GitHub
+- [ ] First commit and push to GitHub (repo: https://github.com/gabrielmaldonado164/webflow-nerdearla)
 
 ### Phase 1 — Blackjack engine (Wed 23) — TDD
 - [ ] Card, Hand, and hand value (hard/soft), blackjack, and pair detection
@@ -150,3 +151,4 @@ Never cut: the playable core, correct strategy, persistence, the "Why?" EV expla
 Append one line per session: date, what was done, and what comes next.
 
 - 2026-09-23: Idea validated, facts verified, roadmap created. Next: Phase 0.
+- 2026-09-23: Phase 0 scaffold done (Next 16.3 + OpenNext + D1/Drizzle + /api/health, verified locally with wrangler dev). Webflow auth OK, no sites yet → project app. Next: interactive first deploy, then Phase 1.
