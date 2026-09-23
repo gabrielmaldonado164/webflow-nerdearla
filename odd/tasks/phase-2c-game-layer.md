@@ -34,7 +34,7 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 ## Delivery
 - Strategy: `ask-on-risk` → owner chose **feature-branch-chain** (2026-09-23). One branch per task, stacked: `feat/phase-2a-pixel-arcade` → `feat/2c-t1-hand-resolution` → `feat/2c-t2-run-mode` → `feat/2c-t3-session-reducer` → `feat/2c-t4-sound` → `feat/2c-t5-game-ui`. Each PR targets the previous branch; merge in order.
 - Forecast: ~1200–1600 authored changed lines across T1–T5.
-- Last reviewed boundary: f04a04a (T3 lineage review-5fdae880c51aa8be approved + acknowledged; earlier: review-d032dc5df892a740, review-7659ea5ddda7d84c).
+- Last reviewed boundary: 449275d (T3-fix + T4 lineage review-df3adeb3034bd8b1 approved + acknowledged; earlier: review-5fdae880c51aa8be, review-d032dc5df892a740, review-7659ea5ddda7d84c).
 
 ## Route per task
 | Task | Route | Trigger evidence |
@@ -54,6 +54,7 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 - 2026-09-23: T3 review approved. Follow-ups (fold into T4 start): `choose`/`next` consume the seeded RNG before the accept/ignore gate, breaking seeded determinism — gate on pending/over/available before drawing and add a seeded-determinism test; hook-level once-semantics stay unproved without a DOM test harness (accepted: logic lives in the tested pure `applyDecision`; keep `choose` using one sync path).
 - 2026-09-23: T3 follow-up on `feat/2c-t3-session-reducer` (0e87c89): pure `canDecide`/`canDeal`, `sessionRng.ts` gates RNG draws before accept/ignore, seeded-determinism test with interleaved ignored events, single sync path in `choose`. RED/GREEN observed.
 - 2026-09-23: T4 done on `feat/2c-t4-sound`: 764ee21 `sound.ts` (cueNotes pure data, lazy AudioContext player, no-op on server/unsupported), f914045 `preferences.ts` (guarded localStorage for muted + best score), ba510fd `useSound` hook (not wired yet). RED/GREEN observed; 269 tests, tsc, lint, build clean.
+- 2026-09-23: T3-fix + T4 review approved. Follow-ups folded into T5 start: guard the sound player fully (AudioContext constructor throw, resume() rejection, scheduling on a closed context) so play() never throws; clamp non-finite combo multipliers; load `muted` after mount to avoid a hydration mismatch; fire `onDecision` from `applyDecision`'s explicit record instead of the last decisions element; make the unavailable-action RNG tests use a hand-built scenario so they never pass vacuously.
 
 ## Next step
 T5 on `feat/2c-t5-game-ui` (after the T3-fix + T4 review). Known interim gap: after 3 mistakes the run is over and choices are ignored, but the game-over screen only arrives in T5 (keyboard Enter/R restarts meanwhile).
