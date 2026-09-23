@@ -8,6 +8,8 @@ import {
   isHoleCardRevealed,
   isOutcomeRevealed,
   isStepRevealed,
+  revealedDealerCards,
+  revealedHandCards,
   type RevealTiming,
 } from "./revealSchedule";
 
@@ -95,5 +97,57 @@ describe("reveal predicates", () => {
   it("isOutcomeRevealed follows outcomeAt", () => {
     expect(isOutcomeRevealed(schedule, schedule.outcomeAt - 1)).toBe(false);
     expect(isOutcomeRevealed(schedule, schedule.outcomeAt)).toBe(true);
+  });
+});
+
+const CARD_2 = (rank: Card["rank"]): Card => ({ rank, suit: "clubs" });
+
+describe("revealedHandCards", () => {
+  const finalCards = [CARD_2("10"), CARD_2("6"), CARD_2("3"), CARD_2("2")]; // initial 10/6, hit 3, hit 2
+
+  it("shows only the initial cards with nothing revealed yet", () => {
+    const steps = [playerStep(0), playerStep(0)];
+    expect(revealedHandCards(finalCards, 2, 0, steps, 0)).toEqual([CARD_2("10"), CARD_2("6")]);
+  });
+
+  it("adds one extra card per revealed step belonging to this hand", () => {
+    const steps = [playerStep(0), playerStep(0)];
+    expect(revealedHandCards(finalCards, 2, 0, steps, 1)).toEqual([CARD_2("10"), CARD_2("6"), CARD_2("3")]);
+    expect(revealedHandCards(finalCards, 2, 0, steps, 2)).toEqual(finalCards);
+  });
+
+  it("only counts steps that belong to the given hand index (split hands)", () => {
+    const steps = [playerStep(0), playerStep(1), playerStep(0)];
+    // revealedStepCount=2 means the first two steps (hand 0, hand 1) fired;
+    // hand 0 has only gotten its first extra card so far.
+    expect(revealedHandCards(finalCards, 2, 0, steps, 2)).toEqual([CARD_2("10"), CARD_2("6"), CARD_2("3")]);
+  });
+
+  it("starts from a single initial card for a split hand", () => {
+    const splitFinalCards = [CARD_2("8"), CARD_2("4")];
+    expect(revealedHandCards(splitFinalCards, 1, 1, [playerStep(1)], 0)).toEqual([CARD_2("8")]);
+    expect(revealedHandCards(splitFinalCards, 1, 1, [playerStep(1)], 1)).toEqual(splitFinalCards);
+  });
+});
+
+describe("revealedDealerCards", () => {
+  const finalCards = [CARD_2("10"), CARD_2("9"), CARD_2("5")]; // upcard, hole, one draw
+
+  it("shows only the upcard before the hole card is revealed", () => {
+    expect(revealedDealerCards(finalCards, [dealerStep()], 0, false)).toEqual([CARD_2("10")]);
+  });
+
+  it("adds the hole card once revealed, before any draw step", () => {
+    expect(revealedDealerCards(finalCards, [dealerStep()], 0, true)).toEqual([CARD_2("10"), CARD_2("9")]);
+  });
+
+  it("adds draw cards one at a time as dealer steps are revealed", () => {
+    expect(revealedDealerCards(finalCards, [dealerStep()], 1, true)).toEqual(finalCards);
+  });
+
+  it("ignores player steps when counting dealer draws", () => {
+    const mixedSteps = [playerStep(0), dealerStep()];
+    expect(revealedDealerCards(finalCards, mixedSteps, 1, true)).toEqual([CARD_2("10"), CARD_2("9")]);
+    expect(revealedDealerCards(finalCards, mixedSteps, 2, true)).toEqual(finalCards);
   });
 });
