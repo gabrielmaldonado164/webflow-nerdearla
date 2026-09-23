@@ -368,6 +368,9 @@ export function PixelCasinoScreen() {
                               {revealedHandCards(hand.cards, initialCardCount, handIndex, resolution.steps, revealedStepCount).map((card, index) => (
                                 <GameCard key={`split-${handIndex}-${index}-${card.rank}-${card.suit}`} card={card} dealIndex={index} />
                               ))}
+                              {showOutcome && feedback && (
+                                <OutcomeBanner hand={hand} isCorrectDecision={feedback.isCorrect} />
+                              )}
                             </div>
                           </div>
                         ))}
@@ -383,6 +386,9 @@ export function PixelCasinoScreen() {
                           ))
                           : scenario?.playerCards.map((card, index) => <div key={`${index}-${card.rank}-${card.suit}`} className={styles.cardSlot}><GameCard card={card} dealIndex={index === 0 ? 0 : 2} /></div>)}
                         {!scenario && !resolution && <><div className={styles.cardSlot}><GameCard faceDown dealIndex={0} /></div><div className={styles.cardSlot}><GameCard faceDown dealIndex={2} /></div></>}
+                        {showOutcome && feedback && resolution && (
+                          <OutcomeBanner hand={resolution.playerHands[0]} isCorrectDecision={feedback.isCorrect} />
+                        )}
                       </div>
                     </div>
                   )}
@@ -390,18 +396,13 @@ export function PixelCasinoScreen() {
                 <div className={styles.frontRail} aria-hidden="true"><div className={styles.railBadge}><strong>21 LAB</strong><span>BLACKJACK PAYS 3 TO 2</span></div></div>
               </div>
             </div>
-            {/* Hidden once the outcome banner(s) take over (showOutcome) — otherwise
-                this stamp sits directly behind them and bleeds through the gap
-                between two side-by-side split-hand banners. */}
+            {/* Hidden once the per-hand outcome banner(s) take over (showOutcome),
+                which are anchored to each player hand's own cards instead of
+                this stage-centered stamp (see OutcomeBanner). */}
             <AnimatePresence>
               {feedback && !showOutcome && <motion.div key={`stamp-${stats.handsPlayed}`} className={`${styles.resultStamp} ${feedback.isCorrect ? styles.resultCorrect : styles.resultIncorrect}`} initial={reduceMotion ? false : { opacity: 0, scale: 2.1, rotate: -8 }} animate={{ opacity: 1, scale: 1, rotate: -5 }} exit={reduceMotion ? undefined : { opacity: 0, scale: 0.85 }} transition={{ type: "spring", stiffness: 290, damping: 17 }} aria-hidden="true">{feedback.isCorrect ? "PERFECT!" : "KEEP LEARNING"}</motion.div>}
             </AnimatePresence>
             {feedback?.isCorrect && !showOutcome && <div className={styles.rewardParticles} key={`burst-${stats.handsPlayed}`} aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <Sparkle key={index} weight="fill" />)}</div>}
-            <AnimatePresence>
-              {feedback && showOutcome && resolution && (
-                <OutcomeBanner hands={resolution.playerHands} isCorrectDecision={feedback.isCorrect} />
-              )}
-            </AnimatePresence>
             <AnimatePresence>
               {isGameOver && (
                 <GameOverOverlay
