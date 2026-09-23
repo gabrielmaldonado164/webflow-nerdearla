@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createSoundPlayer, cueNotes, type SoundCue } from "./sound";
 
@@ -46,6 +46,17 @@ describe("cueNotes", () => {
     expect(cueNotes("combo")).toEqual(cueNotes("combo", { comboMultiplier: 1 }));
   });
 
+  it("clamps a non-finite combo multiplier to the lowest multiplier", () => {
+    expect(cueNotes("combo", { comboMultiplier: NaN })).toEqual(cueNotes("combo", { comboMultiplier: 1 }));
+    expect(cueNotes("combo", { comboMultiplier: Infinity })).toEqual(cueNotes("combo", { comboMultiplier: 1 }));
+
+    for (const notes of [cueNotes("combo", { comboMultiplier: NaN }), cueNotes("combo", { comboMultiplier: Infinity })]) {
+      for (const note of notes) {
+        expect(Number.isFinite(note.frequency)).toBe(true);
+      }
+    }
+  });
+
   it("plays gameOver as a descending sequence", () => {
     const notes = cueNotes("gameOver");
     for (let i = 1; i < notes.length; i++) {
@@ -59,5 +70,92 @@ describe("createSoundPlayer", () => {
     const player = createSoundPlayer();
     expect(() => player.play("deal")).not.toThrow();
     expect(() => player.play("combo", { comboMultiplier: 3 })).not.toThrow();
+  });
+
+  function fakeOscillator() {
+    return {
+      type: "square",
+      frequency: { value: 0 },
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+  }
+
+  function fakeGainNode() {
+    return {
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+      },
+      connect: vi.fn(),
+    };
+  }
+
+  function fakeAudioContext(overrides: Partial<{
+    state: string;
+    resume: () => Promise<void>;
+    createOscillator: () => unknown;
+  }> = {}) {
+    return {
+      state: overrides.state ?? "running",
+      currentTime: 0,
+      destination: {},
+      resume: overrides.resume ?? (() => Promise.resolve()),
+      createOscillator: overrides.createOscillator ?? fakeOscillator,
+      createGain: fakeGainNode,
+    } as unknown as AudioContext;
+  }
+
+  function ctorReturning(audioCtx: AudioContext): new () => AudioContext {
+    function FakeAudioContext(this: unknown) {
+      return audioCtx;
+    }
+    return FakeAudioContext as unknown as new () => AudioContext;
+  }
+
+  it("never throws when the AudioContext constructor itself throws", () => {
+    class ThrowingAudioContext {
+      constructor() {
+        throw new Error("AudioContext blocked");
+      }
+    }
+    const player = createSoundPlayer({ audioContextCtor: ThrowingAudioContext as unknown as new () => AudioContext });
+
+    expect(() => player.play("deal")).not.toThrow();
+    // Marked unavailable after the first failure: a second call must not
+    // retry the throwing constructor either.
+    expect(() => player.play("correct")).not.toThrow();
+  });
+
+  it("never leaks an unhandled rejection when resume() rejects", async () => {
+    const onUnhandledRejection = vi.fn();
+    process.on("unhandledRejection", onUnhandledRejection);
+
+    try {
+      const audioCtx = fakeAudioContext({
+        state: "suspended",
+        resume: () => Promise.reject(new Error("no user gesture yet")),
+      });
+      const player = createSoundPlayer({ audioContextCtor: ctorReturning(audioCtx) });
+
+      expect(() => player.play("deal")).not.toThrow();
+      // Let the rejected promise's microtask settle.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(onUnhandledRejection).not.toHaveBeenCalled();
+    } finally {
+      process.off("unhandledRejection", onUnhandledRejection);
+    }
+  });
+
+  it("never throws when scheduling fails on a closed/broken context", () => {
+    const audioCtx = fakeAudioContext({
+      createOscillator: () => {
+        throw new Error("context is closed");
+      },
+    });
+    const player = createSoundPlayer({ audioContextCtor: ctorReturning(audioCtx) });
+
+    expect(() => player.play("deal")).not.toThrow();
   });
 });

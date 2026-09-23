@@ -119,8 +119,14 @@ const COMBO_ARPEGGIO_SEMITONES = [0, 4, 7];
 /** Semitones the whole `combo` arpeggio shifts up per extra multiplier level. */
 const COMBO_SEMITONES_PER_LEVEL = 3;
 
+/** Clamps to the lowest multiplier for anything that isn't a real, finite number (undefined, NaN, Infinity). */
+function clampComboMultiplier(comboMultiplier: number | undefined): number {
+  if (comboMultiplier === undefined || !Number.isFinite(comboMultiplier)) return 1;
+  return Math.max(1, comboMultiplier);
+}
+
 function comboNotes(comboMultiplier: number | undefined): SoundNote[] {
-  const multiplier = Math.max(1, comboMultiplier ?? 1);
+  const multiplier = clampComboMultiplier(comboMultiplier);
   const shift = (multiplier - 1) * COMBO_SEMITONES_PER_LEVEL;
   return specsToNotes(
     COMBO_ARPEGGIO_SEMITONES.map((semitone, index) => ({
@@ -177,31 +183,70 @@ function scheduleNote(ctx: AudioContext, note: SoundNote, playAt: number): void 
   oscillator.stop(stopAt);
 }
 
+export interface CreateSoundPlayerOptions {
+  /**
+   * Overrides the `AudioContext` constructor the player uses. Only meant
+   * for tests (a fake or throwing constructor); production always
+   * resolves it from `window`.
+   */
+  audioContextCtor?: new () => AudioContext;
+}
+
 /**
  * Creates a player with its own lazily-created `AudioContext`. Safe to
  * construct anywhere (including on the server); it only touches the
  * `AudioContext` once `play()` is actually called.
+ *
+ * SFX is pure decoration: nothing here — a browser that refuses to
+ * construct `AudioContext`, a `resume()` that rejects (no user gesture
+ * yet, some browsers), or scheduling on a closed/broken context — may
+ * ever throw synchronously or leak an unhandled rejection out of
+ * `play()`. Once the context is confirmed unavailable, later `play()`
+ * calls short-circuit instead of retrying the failing constructor.
  */
-export function createSoundPlayer(): SoundPlayer {
+export function createSoundPlayer(options: CreateSoundPlayerOptions = {}): SoundPlayer {
   let ctx: AudioContext | null = null;
+  let unavailable = false;
 
   function getContext(): AudioContext | null {
     if (ctx) return ctx;
-    const AudioContextCtor = resolveAudioContextCtor();
-    if (!AudioContextCtor) return null; // Server, or Web Audio unavailable.
-    ctx = new AudioContextCtor();
-    return ctx;
+    if (unavailable) return null;
+    const AudioContextCtor = options.audioContextCtor ?? resolveAudioContextCtor();
+    if (!AudioContextCtor) {
+      unavailable = true; // Server, or Web Audio unavailable.
+      return null;
+    }
+    try {
+      ctx = new AudioContextCtor();
+      return ctx;
+    } catch {
+      // Construction can throw (e.g. some browsers before a user
+      // gesture, or a locked-down/test environment).
+      unavailable = true;
+      return null;
+    }
   }
 
   return {
     play(cue: SoundCue, options?: CueNotesOptions): void {
       const audioCtx = getContext();
       if (!audioCtx) return;
-      if (audioCtx.state === "suspended") void audioCtx.resume();
 
-      const now = audioCtx.currentTime;
-      for (const note of cueNotes(cue, options)) {
-        scheduleNote(audioCtx, note, now);
+      try {
+        if (audioCtx.state === "suspended") {
+          void audioCtx.resume()?.catch(() => {
+            // No user gesture yet, or the browser refused to resume:
+            // the next call to play() will try resuming again.
+          });
+        }
+
+        const now = audioCtx.currentTime;
+        for (const note of cueNotes(cue, options)) {
+          scheduleNote(audioCtx, note, now);
+        }
+      } catch {
+        // Scheduling failed (closed/broken context, an oscillator type
+        // the browser rejects, etc.) — never worth crashing the game.
       }
     },
   };
