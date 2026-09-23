@@ -40,7 +40,8 @@ export interface SessionState {
 export type SessionEvent =
   | { type: "deal"; scenario: Scenario; holeCard: Card }
   | { type: "decide"; action: Action; resolution: ResolveHandResult; decidedAt: string }
-  | { type: "restart"; scenario: Scenario; holeCard: Card; bestScore?: number };
+  | { type: "restart"; scenario: Scenario; holeCard: Card; bestScore?: number }
+  | { type: "setBestScore"; bestScore: number };
 
 /** A fresh session: no hand dealt yet, empty decision history, a fresh run. */
 export function createInitialSessionState(bestScore = 0): SessionState {
@@ -167,5 +168,11 @@ export function sessionReducer(state: SessionState, event: SessionEvent): Sessio
         feedback: null,
       };
     }
+
+    // Raises (never lowers) the run's bestScore — used to fold in a
+    // value loaded from storage after mount, once, without disturbing
+    // anything else (see usePracticeSession's hydration-safe load).
+    case "setBestScore":
+      return { ...state, run: { ...state.run, bestScore: Math.max(state.run.bestScore, event.bestScore) } };
   }
 }
