@@ -1,15 +1,28 @@
 "use client";
 
-import { ArrowRight, BookOpen, Fire, Lightning, Sparkle, Spade, Target, Trophy } from "@phosphor-icons/react";
+import { ArrowRight, BookOpen, Lightning, Sparkle, Spade, Target, Trophy } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Action, Card, ScenarioCategory, Suit } from "@/blackjack";
 import { handValue, rankValue } from "@/blackjack";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
+import { GameOverOverlay } from "./GameOverOverlay";
+import { Hud } from "./Hud";
 import { keyToCommand } from "./keyboard";
-import { CORRECT_DECISION_XP, getArcadeProgress, INCORRECT_DECISION_XP } from "./progress";
+import { OutcomeBanner } from "./OutcomeBanner";
+import { loadBestScore, saveBestScore } from "./preferences";
+import { CORRECT_DECISION_XP, INCORRECT_DECISION_XP } from "./progress";
+import {
+  buildRevealSchedule,
+  DEFAULT_REVEAL_TIMING,
+  INSTANT_REVEAL_TIMING,
+  revealedDealerCards,
+  revealedHandCards,
+} from "./revealSchedule";
+import { computeRunAccuracy, isNewBestScore } from "./runSummary";
+import { useSound } from "./useSound";
 import styles from "./PixelCasinoScreen.module.css";
 
 const ACTIONS: { id: Action; label: string; key: string; detail: string }[] = [
@@ -71,14 +84,178 @@ function GameCard({ card, faceDown = false, dealIndex }: GameCardProps) {
   );
 }
 
+interface HoleCardProps {
+  card?: Card;
+  revealed: boolean;
+  dealIndex: number;
+}
+
+/** The dealer's hole card: face-down until `revealed`, then a 3D flip to face-up. */
+function HoleCard({ card, revealed, dealIndex }: HoleCardProps) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <div className={styles.flipContainer}>
+      <motion.div
+        className={styles.flipInner}
+        initial={false}
+        animate={{ rotateY: revealed ? 180 : 0 }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: "easeInOut" }}
+      >
+        <div className={styles.flipFace}>
+          <GameCard faceDown dealIndex={dealIndex} />
+        </div>
+        <div className={`${styles.flipFace} ${styles.flipFaceBack}`}>
+          <GameCard card={card} dealIndex={dealIndex} />
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export function PixelCasinoScreen() {
-  const { scenario, feedback, decisions, stats, run, choose, next, restart } = usePracticeSession();
+  const {
+    scenario,
+    feedback,
+    decisions,
+    stats,
+    run,
+    choose,
+    next,
+    restart,
+    setBestScore,
+  } = usePracticeSession();
+  const { muted, toggleMuted, play } = useSound();
   const [showClue, setShowClue] = useState(false);
   const [pendingAction, setPendingAction] = useState<Action | null>(null);
   const [handSequence, setHandSequence] = useState(0);
   const pendingTimer = useRef<number | null>(null);
   const reduceMotion = useReducedMotion();
-  const progress = useMemo(() => getArcadeProgress(decisions), [decisions]);
+
+  // Kept current without re-triggering effects that shouldn't fire again
+  // just because the mute state (and so `play`'s identity) changed
+  // mid-animation.
+  const playRef = useRef(play);
+  useEffect(() => {
+    playRef.current = play;
+  }, [play]);
+
+  // --- Hand resolution reveal state ---------------------------------
+  const [revealedStepCount, setRevealedStepCount] = useState(0);
+  const [holeRevealed, setHoleRevealed] = useState(false);
+  const [showOutcome, setShowOutcome] = useState(false);
+
+  // Resets the reveal state the moment a new (or cleared) `feedback`
+  // shows up — done directly during render, comparing against a *state*
+  // copy of the previous value (React's documented pattern for
+  // "adjusting state when a prop changes"; refs can't be read or written
+  // during render) rather than in an effect, so there's no extra
+  // committed frame where stale reveal state from the previous hand
+  // would flash.
+  const [prevFeedback, setPrevFeedback] = useState(feedback);
+  if (prevFeedback !== feedback) {
+    setPrevFeedback(feedback);
+    setRevealedStepCount(0);
+    setHoleRevealed(false);
+    setShowOutcome(false);
+  }
+
+  // Schedules the reveal timeline (extra cards landing, the hole-card
+  // flip, then the outcome banner) and their sound cues. `playRef` keeps
+  // `play` out of the dependency list on purpose (see above).
+  useEffect(() => {
+    if (!feedback) return;
+    const timing = reduceMotion ? INSTANT_REVEAL_TIMING : DEFAULT_REVEAL_TIMING;
+    const steps = feedback.resolution.steps;
+    const schedule = buildRevealSchedule(steps, timing);
+    const timers: number[] = [];
+
+    steps.forEach((_, index) => {
+      timers.push(
+        window.setTimeout(() => {
+          setRevealedStepCount((count) => Math.max(count, index + 1));
+          playRef.current("deal");
+        }, schedule.stepRevealAt[index]),
+      );
+    });
+
+    timers.push(
+      window.setTimeout(() => {
+        setHoleRevealed(true);
+        playRef.current("flip");
+      }, schedule.holeCardFlipAt),
+    );
+
+    timers.push(
+      window.setTimeout(() => {
+        setShowOutcome(true);
+        const hands = feedback.resolution.playerHands;
+        const anyWin = hands.some((hand) => hand.outcome === "win" || hand.outcome === "blackjack");
+        const allPush = hands.every((hand) => hand.outcome === "push");
+        playRef.current(anyWin ? "win" : allPush ? "push" : "lose");
+      }, schedule.outcomeAt),
+    );
+
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, [feedback, reduceMotion]);
+
+  // Immediate decision-grading feedback: correct/mistake sound, plus
+  // mistake juice (screen shake is CSS-only via .stageMiss below;
+  // vibration is skipped under reduced motion, same as the shake).
+  useEffect(() => {
+    if (!feedback) return;
+    playRef.current(feedback.isCorrect ? "correct" : "mistake");
+    if (!feedback.isCorrect && !reduceMotion) {
+      try {
+        navigator.vibrate?.(120);
+      } catch {
+        // Unsupported, blocked, or a non-secure context — no-op.
+      }
+    }
+  }, [feedback, reduceMotion]);
+
+  // --- Combo multiplier: pulse (visual, computed during render) + sound (effect) ---
+  const [prevMultiplier, setPrevMultiplier] = useState(run.multiplier);
+  const [comboPulseToken, setComboPulseToken] = useState(0);
+  if (run.multiplier !== prevMultiplier) {
+    const rose = run.multiplier > prevMultiplier;
+    setPrevMultiplier(run.multiplier);
+    if (rose) setComboPulseToken((token) => token + 1);
+  }
+
+  const prevMultiplierForSoundRef = useRef(run.multiplier);
+  useEffect(() => {
+    if (run.multiplier > prevMultiplierForSoundRef.current) {
+      playRef.current("combo", { comboMultiplier: run.multiplier });
+    }
+    prevMultiplierForSoundRef.current = run.multiplier;
+  }, [run.multiplier]);
+
+  // --- Best score: load after mount (hydration-safe), save + sound on game over ---
+  useEffect(() => {
+    setBestScore(loadBestScore());
+  }, [setBestScore]);
+
+  // The best score this run started with (for "New best!" detection at
+  // game over). Tracked with the same render-time state-diff pattern as
+  // above: while no decision has been made yet in this run, it follows
+  // `run.bestScore` (which itself may still be catching up to storage,
+  // see the `setBestScore` effect above); once the first decision lands,
+  // it freezes for the rest of the run.
+  const [enteringBestScore, setEnteringBestScore] = useState(run.bestScore);
+  if (run.decisions === 0 && run.bestScore !== enteringBestScore) {
+    setEnteringBestScore(run.bestScore);
+  }
+
+  const wasOverRef = useRef(false);
+  useEffect(() => {
+    if (run.status === "over" && !wasOverRef.current) {
+      playRef.current("gameOver");
+      saveBestScore(run.bestScore);
+    }
+    wasOverRef.current = run.status === "over";
+  }, [run.status, run.bestScore]);
 
   const chooseAction = useCallback((action: Action) => {
     if (!scenario || feedback || pendingAction || !scenario.availableActions.includes(action)) return;
@@ -125,19 +302,27 @@ export function PixelCasinoScreen() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [feedback, scenario, run.status, chooseAction, nextHand, restart]);
 
-  const total = scenario ? handValue(scenario.playerCards).total : null;
+  const resolution = feedback?.resolution ?? null;
+  const isSplit = (resolution?.playerHands.length ?? 0) > 1;
+  const initialCardCount = feedback?.userAction === "split" ? 1 : 2;
+
+  const dealerVisibleCards = resolution
+    ? revealedDealerCards(resolution.dealerCards, resolution.steps, revealedStepCount, holeRevealed)
+    : null;
+
+  const total = resolution && !isSplit
+    ? resolution.playerHands[0].total
+    : scenario ? handValue(scenario.playerCards).total : null;
   const handNumber = stats.handsPlayed + (feedback ? 0 : 1);
   const splitSelected = feedback?.userAction === "split" || pendingAction === "split";
   const bestAction = feedback && ACTIONS.find(({ id }) => id === feedback.optimalAction)?.label;
+  const isGameOver = run.status === "over";
 
   return (
     <main className={styles.game}>
       <header className={styles.topHud}>
         <div className={styles.brand}><span className={styles.brandSymbol}><Spade weight="fill" aria-hidden="true" /></span><div><strong>21 LAB</strong><small>PLAY · LEARN · LEVEL UP</small></div></div>
-        <div className={styles.hudMetrics} aria-label="Current session progress">
-          <div className={styles.levelMeter}><span>LV {progress.level}</span><div className={styles.meterTrack} role="progressbar" aria-label="XP to next session level" aria-valuenow={progress.levelXp} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${progress.levelXp}%` }} /></div><b>{progress.levelXp}/100 XP</b></div>
-          <div className={`${styles.streak} ${stats.currentStreak >= 3 ? styles.hotStreak : ""}`} aria-label={`${stats.currentStreak} correct decisions in a row`}><Fire weight="fill" aria-hidden="true" /><strong>{stats.currentStreak}</strong><span>STREAK</span></div>
-        </div>
+        <Hud run={run} muted={muted} onToggleMuted={toggleMuted} comboPulseToken={comboPulseToken} reduceMotion={Boolean(reduceMotion)} />
       </header>
 
       <div className={styles.gameLayout}>
@@ -159,27 +344,75 @@ export function PixelCasinoScreen() {
                   <div className={styles.feltGrain} aria-hidden="true" />
                   <div className={styles.feltArc} aria-hidden="true" />
                   <div className={styles.dealerHand}>
-                    <div className={styles.handName}>DEALER <b>{scenario ? rankValue(scenario.dealerUpcard.rank) : "·"}</b></div>
+                    <div className={styles.handName}>DEALER <b>{resolution && holeRevealed ? resolution.dealerTotal : scenario ? rankValue(scenario.dealerUpcard.rank) : "·"}</b></div>
                     <div className={styles.cardFan} key={`dealer-${handSequence}`}>
                       {scenario && <GameCard card={scenario.dealerUpcard} dealIndex={1} />}
-                      <GameCard faceDown dealIndex={3} />
+                      {resolution ? (
+                        <HoleCard card={resolution.dealerCards[1]} revealed={holeRevealed} dealIndex={3} />
+                      ) : (
+                        <GameCard faceDown dealIndex={3} />
+                      )}
+                      {dealerVisibleCards && dealerVisibleCards.slice(2).map((card, index) => (
+                        <GameCard key={`dealer-draw-${index}-${card.rank}-${card.suit}`} card={card} dealIndex={4 + index} />
+                      ))}
                     </div>
                   </div>
-                  <div className={styles.playerHand}>
-                    <div className={styles.handName}>YOUR HAND <b>{total ?? "·"}</b></div>
-                    <div className={`${styles.cardFan} ${splitSelected ? styles.splitFan : ""}`} key={`player-${handSequence}`}>
-                      {scenario?.playerCards.map((card, index) => <div key={`${index}-${card.rank}-${card.suit}`} className={styles.cardSlot}><GameCard card={card} dealIndex={index === 0 ? 0 : 2} /></div>)}
-                      {!scenario && <><div className={styles.cardSlot}><GameCard faceDown dealIndex={0} /></div><div className={styles.cardSlot}><GameCard faceDown dealIndex={2} /></div></>}
+
+                  {isSplit && resolution ? (
+                    <div className={styles.playerHand}>
+                      <div className={styles.splitHandsRow}>
+                        {resolution.playerHands.map((hand, handIndex) => (
+                          <div className={styles.miniHand} key={handIndex}>
+                            <div className={styles.miniHandName}>HAND {handIndex + 1} <b>{hand.total}</b></div>
+                            <div className={styles.cardFan}>
+                              {revealedHandCards(hand.cards, initialCardCount, handIndex, resolution.steps, revealedStepCount).map((card, index) => (
+                                <GameCard key={`split-${handIndex}-${index}-${card.rank}-${card.suit}`} card={card} dealIndex={index} />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className={styles.playerHand}>
+                      <div className={styles.handName}>YOUR HAND <b>{total ?? "·"}</b></div>
+                      <div className={`${styles.cardFan} ${splitSelected ? styles.splitFan : ""}`} key={`player-${handSequence}`}>
+                        {resolution
+                          ? revealedHandCards(resolution.playerHands[0].cards, initialCardCount, 0, resolution.steps, revealedStepCount).map((card, index) => (
+                            <div key={`${index}-${card.rank}-${card.suit}`} className={styles.cardSlot}><GameCard card={card} dealIndex={index === 0 ? 0 : 2} /></div>
+                          ))
+                          : scenario?.playerCards.map((card, index) => <div key={`${index}-${card.rank}-${card.suit}`} className={styles.cardSlot}><GameCard card={card} dealIndex={index === 0 ? 0 : 2} /></div>)}
+                        {!scenario && !resolution && <><div className={styles.cardSlot}><GameCard faceDown dealIndex={0} /></div><div className={styles.cardSlot}><GameCard faceDown dealIndex={2} /></div></>}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className={styles.frontRail} aria-hidden="true"><div className={styles.railBadge}><strong>21 LAB</strong><span>BLACKJACK PAYS 3 TO 2</span></div></div>
               </div>
             </div>
+            {/* Hidden once the outcome banner(s) take over (showOutcome) — otherwise
+                this stamp sits directly behind them and bleeds through the gap
+                between two side-by-side split-hand banners. */}
             <AnimatePresence>
-              {feedback && <motion.div key={`stamp-${stats.handsPlayed}`} className={`${styles.resultStamp} ${feedback.isCorrect ? styles.resultCorrect : styles.resultIncorrect}`} initial={reduceMotion ? false : { opacity: 0, scale: 2.1, rotate: -8 }} animate={{ opacity: 1, scale: 1, rotate: -5 }} exit={reduceMotion ? undefined : { opacity: 0, scale: 0.85 }} transition={{ type: "spring", stiffness: 290, damping: 17 }} aria-hidden="true">{feedback.isCorrect ? "PERFECT!" : "KEEP LEARNING"}</motion.div>}
+              {feedback && !showOutcome && <motion.div key={`stamp-${stats.handsPlayed}`} className={`${styles.resultStamp} ${feedback.isCorrect ? styles.resultCorrect : styles.resultIncorrect}`} initial={reduceMotion ? false : { opacity: 0, scale: 2.1, rotate: -8 }} animate={{ opacity: 1, scale: 1, rotate: -5 }} exit={reduceMotion ? undefined : { opacity: 0, scale: 0.85 }} transition={{ type: "spring", stiffness: 290, damping: 17 }} aria-hidden="true">{feedback.isCorrect ? "PERFECT!" : "KEEP LEARNING"}</motion.div>}
             </AnimatePresence>
-            {feedback?.isCorrect && <div className={styles.rewardParticles} key={`burst-${stats.handsPlayed}`} aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <Sparkle key={index} weight="fill" />)}</div>}
+            {feedback?.isCorrect && !showOutcome && <div className={styles.rewardParticles} key={`burst-${stats.handsPlayed}`} aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <Sparkle key={index} weight="fill" />)}</div>}
+            <AnimatePresence>
+              {feedback && showOutcome && resolution && (
+                <OutcomeBanner hands={resolution.playerHands} isCorrectDecision={feedback.isCorrect} />
+              )}
+            </AnimatePresence>
+            <AnimatePresence>
+              {isGameOver && (
+                <GameOverOverlay
+                  score={run.score}
+                  bestScore={run.bestScore}
+                  isNewBest={isNewBestScore(enteringBestScore, run.score)}
+                  accuracy={computeRunAccuracy(decisions, run.decisions)}
+                  onRestart={restart}
+                />
+              )}
+            </AnimatePresence>
           </section>
 
           <section className={styles.console} aria-label="Choose your move">
@@ -189,7 +422,7 @@ export function PixelCasinoScreen() {
               {feedback ? <motion.div key={`feedback-${stats.handsPlayed}`} className={`${styles.feedback} ${feedback.isCorrect ? styles.feedbackGood : styles.feedbackBad}`} initial={reduceMotion ? false : { opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={reduceMotion ? undefined : { opacity: 0 }} aria-live="polite">
                 <div className={styles.feedbackBadge}>{feedback.isCorrect ? <Trophy weight="fill" aria-hidden="true" /> : <BookOpen weight="fill" aria-hidden="true" />}</div>
                 <div className={styles.feedbackText}><strong>{feedback.isCorrect ? "Perfect move!" : "Not quite. Now you know."}</strong><p>{feedback.message}</p>{!feedback.isCorrect && <small>Best move: {bestAction}</small>}<span>+{feedback.isCorrect ? CORRECT_DECISION_XP : INCORRECT_DECISION_XP} SESSION XP</span></div>
-                <button type="button" className={styles.nextButton} onClick={nextHand}>DEAL NEXT HAND <ArrowRight weight="bold" aria-hidden="true" /></button>
+                {!isGameOver && <button type="button" className={styles.nextButton} onClick={nextHand}>DEAL NEXT HAND <ArrowRight weight="bold" aria-hidden="true" /></button>}
               </motion.div> : <motion.div key="actions" className={styles.actions} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 {ACTIONS.map(({ id, label, key, detail }) => <button key={id} type="button" className={`${styles.actionButton} ${pendingAction === id ? styles.actionPressed : ""} ${pendingAction === id && scenario?.optimalAction !== id ? styles.actionWrong : ""}`} disabled={!scenario || Boolean(pendingAction) || !scenario.availableActions.includes(id)} onClick={() => chooseAction(id)} aria-label={`${label}: ${detail}`}><kbd>{key}</kbd><strong>{label}</strong><span>{detail}</span></button>)}
               </motion.div>}

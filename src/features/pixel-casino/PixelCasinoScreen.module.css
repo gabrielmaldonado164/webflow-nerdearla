@@ -80,6 +80,19 @@
 .cardSlot { transition: transform .28s steps(6, end); }
 .splitFan .cardSlot:first-child { transform: translateX(-16px) rotate(-8deg); }
 .splitFan .cardSlot:last-child { transform: translateX(16px) rotate(8deg); }
+.splitHandsRow { display: flex; justify-content: center; gap: 14px; }
+.miniHand { display: flex; flex-direction: column; align-items: center; }
+.miniHandName { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; color: #f8edcf; font: 900 8px "Courier New", monospace; letter-spacing: .04em; text-shadow: 1px 1px #082617; white-space: nowrap; }
+.miniHandName b { min-width: 20px; display: inline-block; padding: 1px 4px; color: #fcf6e7; background: #071e19; border: 2px solid #589a72; text-align: center; font-size: 10px; }
+.miniHand .cardFan { gap: 3px; }
+.miniHand .card { width: 44px; height: 64px; }
+.miniHand .cardPip { font-size: 26px; }
+.miniHand .cardCorner { font-size: 10px; }
+.miniHand .cardCorner i { font-size: 8px; }
+.flipContainer { perspective: 900px; }
+.flipInner { display: grid; transform-style: preserve-3d; }
+.flipFace { grid-column: 1; grid-row: 1; backface-visibility: hidden; }
+.flipFaceBack { transform: rotateY(180deg); }
 .card { width: 63px; height: 91px; position: relative; border: 3px solid #14241e; color: #1e2924; background: #fff9e9; box-shadow: 4px 5px 0 #05180fbb, inset 0 0 0 2px #fff; font-family: "Courier New", monospace; }
 .cardRed { color: #b52e3d; }
 .cardCorner { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; align-items: center; font-size: 15px; line-height: .85; font-weight: 900; }
@@ -225,6 +238,13 @@
   .feedbackText p { font-size: 12px; }
   .nextButton { grid-column: auto; min-width: 132px; align-self: stretch; }
   .playerPanel { align-self: start; min-height: 100%; padding: 18px; }
+  .splitHandsRow { gap: 22px; }
+  .miniHand .card { width: 58px; height: 84px; }
+  .miniHand .cardPip { font-size: 34px; }
+  .miniHand .cardCorner { font-size: 13px; }
+  .miniHand .cardCorner i { font-size: 10px; }
+  .miniHandName { font-size: 10px; }
+  .miniHandName b { font-size: 12px; }
 }
 @media (max-width: 360px) {
   .brand strong { font-size: 17px; }
