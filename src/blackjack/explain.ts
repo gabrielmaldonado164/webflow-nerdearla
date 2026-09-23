@@ -58,7 +58,7 @@ const TEMPLATES: Record<SituationFamily, { perfect: string; miss: string }> = {
     miss: "This pair plays better split into two separate hands than kept as one, give it a try next time.",
   },
   "never-split-tens": {
-    perfect: "Two ten-value cards already make 20, no need to break up a great hand.",
+    perfect: "Two ten-value cards already make 20, so standing keeps that great hand intact.",
     miss: "A pair of tens is already a strong 20, so standing is the best call here.",
   },
   "pair-fives-double": {
