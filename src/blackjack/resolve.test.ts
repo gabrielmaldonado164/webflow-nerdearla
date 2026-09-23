@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Card, Rank } from "./cards";
 import { drawCard } from "./cards";
 import { createRng } from "./rng";
+import type { GameRules } from "./rules";
 import { DEFAULT_RULES } from "./rules";
 import { dealHoleCard, resolveHand } from "./resolve";
 
@@ -43,6 +44,11 @@ describe("dealHoleCard", () => {
     const draw = scriptedDraw([card("A"), card("4")]);
     const hole = dealHoleCard(card("10"), draw);
     expect(hole).toEqual(card("4"));
+  });
+
+  it("throws after too many redraws when the draw function keeps producing a dealer blackjack", () => {
+    const draw = () => card("K");
+    expect(() => dealHoleCard(card("A"), draw)).toThrow(/attempts/i);
   });
 });
 
@@ -218,6 +224,108 @@ describe("resolveHand", () => {
     ]);
     // Only the two ace-split cards and one dealer draw: no auto-play cards.
     expect(result.steps).toHaveLength(3);
+  });
+
+  it("a matching card after split does not trigger a nested split: the after-split hand is graded as a hard total and hits", () => {
+    // optimalAction can never return "split" for an after-split hand: its
+    // pair check requires !isAfterSplit (no resplitting in v1), so a
+    // matching card here must be played as a hard total instead of being
+    // silently treated as a "hit" or re-split.
+    const draw = scriptedDraw([
+      card("8"), // hand 0 split card -> 8,8 = 16 (a pair again, but resplitting is blocked)
+      card("3"), // hand 0 hits the hard 16 vs. dealer 10 -> 8,8,3 = 19
+      card("9"), // hand 1 split card -> 8,9 = 17 (stands immediately)
+      card("K"), // dealer draws and busts
+    ]);
+    const result = resolveHand({
+      playerCards: [card("8"), card("8")],
+      dealerUpcard: card("10"),
+      holeCard: card("2"),
+      action: "split",
+      draw,
+      rules: DEFAULT_RULES,
+    });
+
+    expect(result.playerHands).toEqual([
+      {
+        cards: [card("8"), card("8"), card("3")],
+        total: 19,
+        doubled: false,
+        busted: false,
+        outcome: "win",
+      },
+      {
+        cards: [card("8"), card("9")],
+        total: 17,
+        doubled: false,
+        busted: false,
+        outcome: "win",
+      },
+    ]);
+    expect(result.dealerBusted).toBe(true);
+    expect(result.steps).toEqual([
+      { actor: "player", handIndex: 0, card: card("8") },
+      { actor: "player", handIndex: 0, card: card("3") },
+      { actor: "player", handIndex: 1, card: card("9") },
+      { actor: "dealer", handIndex: 0, card: card("K") },
+    ]);
+  });
+
+  it("dealer hits a soft 17 under H17, then stands once the hand turns hard", () => {
+    const draw = scriptedDraw([card("10")]);
+    const rules: GameRules = { ...DEFAULT_RULES, dealerStandsOnSoft17: false };
+    const result = resolveHand({
+      playerCards: [card("K"), card("9")],
+      dealerUpcard: card("6"),
+      holeCard: card("A"),
+      action: "stand",
+      draw,
+      rules,
+    });
+
+    expect(result.dealerCards).toEqual([card("6"), card("A"), card("10")]);
+    expect(result.dealerTotal).toBe(17);
+    expect(result.dealerBusted).toBe(false);
+    expect(result.playerHands[0].outcome).toBe("win");
+    expect(result.steps).toEqual([{ actor: "dealer", handIndex: 0, card: card("10") }]);
+  });
+
+  it("split Aces play out normally when the table does not restrict them to one card each", () => {
+    const draw = scriptedDraw([card("5"), card("3"), card("K"), card("9")]);
+    const rules: GameRules = { ...DEFAULT_RULES, splitAcesReceiveOneCardEach: false };
+    const result = resolveHand({
+      playerCards: [card("A"), card("A")],
+      dealerUpcard: card("6"),
+      holeCard: card("8"),
+      action: "split",
+      draw,
+      rules,
+    });
+
+    expect(result.playerHands).toEqual([
+      {
+        cards: [card("A"), card("5"), card("3")],
+        total: 19,
+        doubled: true,
+        busted: false,
+        outcome: "win",
+      },
+      {
+        // A post-split 21 is never a natural: this is "win", not "blackjack".
+        cards: [card("A"), card("K")],
+        total: 21,
+        doubled: false,
+        busted: false,
+        outcome: "win",
+      },
+    ]);
+    expect(result.dealerBusted).toBe(true);
+    expect(result.steps).toEqual([
+      { actor: "player", handIndex: 0, card: card("5") },
+      { actor: "player", handIndex: 0, card: card("3") },
+      { actor: "player", handIndex: 1, card: card("K") },
+      { actor: "dealer", handIndex: 0, card: card("9") },
+    ]);
   });
 
   it("a natural two-card blackjack beats any non-blackjack dealer total, even a dealer 21", () => {

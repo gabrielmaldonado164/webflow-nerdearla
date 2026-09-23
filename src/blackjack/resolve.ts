@@ -20,6 +20,9 @@ import { optimalAction } from "./strategy";
 
 export type HandOutcome = "win" | "lose" | "push" | "blackjack";
 
+/** Maximum redraws before giving up on a non-blackjack hole card. */
+const MAX_HOLE_CARD_ATTEMPTS = 1000;
+
 export interface ResolvedPlayerHand {
   cards: Card[];
   total: number;
@@ -56,13 +59,23 @@ export interface ResolveHandResult {
  * Deals the dealer's hole card, redrawing while it would complete a
  * dealer blackjack. Basic strategy assumes the US peek rule, so a hand
  * the player actually gets to act on never faces a dealer natural.
+ *
+ * Bounded at `MAX_HOLE_CARD_ATTEMPTS` redraws: a real shoe always yields
+ * a non-blackjack hole card well before that, so hitting the bound means
+ * `draw` itself is degenerate (e.g. always returning a ten-value card
+ * for an Ace upcard), and continuing to loop would hang the caller.
  */
 export function dealHoleCard(upcard: Card, draw: () => Card): Card {
-  let hole = draw();
-  while (isBlackjack([upcard, hole])) {
-    hole = draw();
+  for (let attempt = 0; attempt < MAX_HOLE_CARD_ATTEMPTS; attempt++) {
+    const hole = draw();
+    if (!isBlackjack([upcard, hole])) {
+      return hole;
+    }
   }
-  return hole;
+  throw new Error(
+    `dealHoleCard could not find a non-blackjack hole card for a ${upcard.rank} upcard ` +
+      `after ${MAX_HOLE_CARD_ATTEMPTS} attempts; the draw function is likely degenerate`,
+  );
 }
 
 interface PlayedHand {
@@ -88,19 +101,34 @@ function playToCompletion(
   let current = cards;
   for (;;) {
     const action = optimalAction(current, dealerUpcard, rules, { isAfterSplit });
-    if (action === "stand") {
-      return { cards: current, doubled: false };
-    }
-    const drawn = draw();
-    steps.push({ actor: "player", handIndex, card: drawn });
-    current = [...current, drawn];
-    if (action === "double") {
-      return { cards: current, doubled: true };
-    }
-    // "hit" (a repeated "split" can never come back from optimalAction
-    // here: isAfterSplit blocks it, and a >2-card hand blocks it too).
-    if (isBust(current)) {
-      return { cards: current, doubled: false };
+    switch (action) {
+      case "stand":
+        return { cards: current, doubled: false };
+      case "double": {
+        const drawn = draw();
+        steps.push({ actor: "player", handIndex, card: drawn });
+        return { cards: [...current, drawn], doubled: true };
+      }
+      case "hit": {
+        const drawn = draw();
+        steps.push({ actor: "player", handIndex, card: drawn });
+        current = [...current, drawn];
+        if (isBust(current)) {
+          return { cards: current, doubled: false };
+        }
+        break;
+      }
+      default:
+        // "split" can never actually come back from optimalAction here:
+        // isAfterSplit blocks it in the pair check (no resplitting in
+        // v1), regardless of whether the hand drew a matching card. This
+        // branch only guards against a future strategy change silently
+        // being treated as a "hit".
+        throw new Error(
+          `playToCompletion received an unexpected auto-play action "${action}" for a ` +
+            `${current.length}-card hand (isAfterSplit=${isAfterSplit}); only "hit", ` +
+            `"stand", and "double" are supported here.`,
+        );
     }
   }
 }
