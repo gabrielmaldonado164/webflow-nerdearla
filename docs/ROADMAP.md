@@ -102,12 +102,13 @@ Deliver in order. The app must stay deployable after every phase.
 - [x] First commit and push to GitHub (repo: https://github.com/gabrielmaldonado164/webflow-nerdearla)
 
 ### Phase 1 — Blackjack engine (Wed 23) — TDD
-- [ ] Card, Hand, and hand value (hard/soft), blackjack, and pair detection
-- [ ] `availableActions(hand, rules)`
-- [ ] Basic-strategy tables (hard, soft, pairs) for the v1 ruleset + `optimalAction()`
-- [ ] Category classification for each scenario
-- [ ] Monte Carlo `simulateEV(hand, dealerUpcard, action, n)` within the CPU budget (~10–20k hands)
-- [ ] Short explanation templates per category (work without AI)
+- [x] Card, Hand, and hand value (hard/soft), blackjack, and pair detection
+- [x] `availableActions(hand, rules)`
+- [x] Basic-strategy tables (hard, soft, pairs) for the v1 ruleset + `optimalAction()`
+- [x] Category classification for each scenario
+- [x] Monte Carlo `simulateEV(hand, dealerUpcard, action, n)` within the CPU budget (~10–20k hands)
+- [x] Short explanation templates per category (work without AI)
+- [ ] Fix review findings: stiff-hand explanations contradict hit/split, simulateEV input validation, scenario weight validation
 
 ### Phase 2 — Playable core (Thu 24 AM)
 - [ ] Anonymous player cookie + `players` row
@@ -157,3 +158,4 @@ Append one line per session: date, what was done, and what comes next.
 - 2026-09-23: Idea validated, facts verified, roadmap created. Next: Phase 0.
 - 2026-09-23: Phase 0 scaffold done (Next 16.3 + OpenNext + D1/Drizzle + /api/health, verified locally with wrangler dev). Webflow auth OK, no sites yet → project app. Next: interactive first deploy, then Phase 1.
 - 2026-09-23: Phase 0 done. Deployed to https://webflow-nerdearla.webflow.io/ and verified that /api/health persists in D1. Next: Phase 1 (blackjack engine, TDD).
+- 2026-09-23: Phase 1 engine committed (74cde93, 93 tests, review approved). Follow-up fixes for 3 non-blocking findings in progress. Next: Phase 2 (playable core).
