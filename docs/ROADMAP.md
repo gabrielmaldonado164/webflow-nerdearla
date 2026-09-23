@@ -130,7 +130,7 @@ Deliver in order. The app must stay deployable after every phase.
 - [x] Practice screen: dealer at the top, player hand, large action buttons, mobile-first (Pixel Arcade 2.5D; owner accepted 2026-09-23)
 - [x] Decision flow: evaluate → feedback ("Perfect move" / "Not quite") → next hand (committed, reviewed)
 - [ ] Persist every decision in `decisions`
-- [~] Card deal animations and feedback microinteractions (staggered deal, action response, split separation, outcome burst and coach reaction; owner accepted 2026-09-23)
+- [x] Card deal animations and feedback microinteractions (staggered deal, action response, split separation, outcome burst and coach reaction; owner accepted 2026-09-23)
 
 ### Phase 2c — Game layer (after the Phase 2a commit, before 2b persistence)
 Goal: make 21 Lab feel like a web game, not a pretty page. Strategy grading stays in the deterministic engine; game rules are pure TypeScript in `src/training` (or `src/blackjack` for dealer play), developed test-first.
