@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Action, Card, ScenarioCategory, Suit } from "@/blackjack";
 import { handValue, rankValue } from "@/blackjack";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
-import { getArcadeProgress } from "./progress";
+import { CORRECT_DECISION_XP, getArcadeProgress, INCORRECT_DECISION_XP } from "./progress";
 import styles from "./PixelCasinoScreen.module.css";
 
 const ACTIONS: { id: Action; label: string; key: string; detail: string }[] = [
@@ -184,7 +184,7 @@ export function PixelCasinoScreen() {
             <AnimatePresence mode="wait">
               {feedback ? <motion.div key={`feedback-${stats.handsPlayed}`} className={`${styles.feedback} ${feedback.isCorrect ? styles.feedbackGood : styles.feedbackBad}`} initial={reduceMotion ? false : { opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={reduceMotion ? undefined : { opacity: 0 }} aria-live="polite">
                 <div className={styles.feedbackBadge}>{feedback.isCorrect ? <Trophy weight="fill" aria-hidden="true" /> : <BookOpen weight="fill" aria-hidden="true" />}</div>
-                <div className={styles.feedbackText}><strong>{feedback.isCorrect ? "Perfect move!" : "Not quite. Now you know."}</strong><p>{feedback.message}</p>{!feedback.isCorrect && <small>Best move: {bestAction}</small>}<span>+{feedback.isCorrect ? 25 : 5} SESSION XP</span></div>
+                <div className={styles.feedbackText}><strong>{feedback.isCorrect ? "Perfect move!" : "Not quite. Now you know."}</strong><p>{feedback.message}</p>{!feedback.isCorrect && <small>Best move: {bestAction}</small>}<span>+{feedback.isCorrect ? CORRECT_DECISION_XP : INCORRECT_DECISION_XP} SESSION XP</span></div>
                 <button type="button" className={styles.nextButton} onClick={nextHand}>DEAL NEXT HAND <ArrowRight weight="bold" aria-hidden="true" /></button>
               </motion.div> : <motion.div key="actions" className={styles.actions} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 {ACTIONS.map(({ id, label, key, detail }) => <button key={id} type="button" className={`${styles.actionButton} ${pendingAction === id ? styles.actionPressed : ""} ${pendingAction === id && scenario?.optimalAction !== id ? styles.actionWrong : ""}`} disabled={!scenario || Boolean(pendingAction) || !scenario.availableActions.includes(id)} onClick={() => chooseAction(id)} aria-label={`${label}: ${detail}`}><kbd>{key}</kbd><strong>{label}</strong><span>{detail}</span></button>)}
