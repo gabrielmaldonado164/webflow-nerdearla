@@ -9,6 +9,7 @@ import type { Action, Card, ScenarioCategory, Suit } from "@/blackjack";
 import { handValue, rankValue } from "@/blackjack";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
 import { GameOverOverlay } from "./GameOverOverlay";
+import { handTotalLabel } from "./handTotalLabel";
 import { currentHandNumber } from "./handNumber";
 import { Hud } from "./Hud";
 import { keyToCommand } from "./keyboard";
@@ -311,8 +312,11 @@ export function PixelCasinoScreen() {
     ? revealedDealerCards(resolution.dealerCards, resolution.steps, revealedStepCount, holeRevealed)
     : null;
 
-  const total = resolution && !isSplit
-    ? resolution.playerHands[0].total
+  const visiblePlayerHands = resolution
+    ? resolution.playerHands.map((hand, handIndex) => revealedHandCards(hand.cards, initialCardCount, handIndex, resolution.steps, revealedStepCount))
+    : null;
+  const total = visiblePlayerHands && !isSplit
+    ? handTotalLabel(visiblePlayerHands[0])
     : scenario ? handValue(scenario.playerCards).total : null;
   const handNumber = currentHandNumber(run.decisions, Boolean(feedback));
   const splitSelected = feedback?.userAction === "split" || pendingAction === "split";
@@ -344,7 +348,7 @@ export function PixelCasinoScreen() {
                   <div className={styles.feltGrain} aria-hidden="true" />
                   <div className={styles.feltArc} aria-hidden="true" />
                   <div className={styles.dealerHand}>
-                    <div className={styles.handName}>DEALER <b>{resolution && holeRevealed ? resolution.dealerTotal : scenario ? rankValue(scenario.dealerUpcard.rank) : "·"}</b></div>
+                    <div className={styles.handName}>DEALER <b>{dealerVisibleCards && holeRevealed ? handTotalLabel(dealerVisibleCards) : scenario ? rankValue(scenario.dealerUpcard.rank) : "·"}</b></div>
                     <div className={styles.cardFan} key={`dealer-${handSequence}`}>
                       {scenario && <GameCard card={scenario.dealerUpcard} dealIndex={1} />}
                       {resolution ? (
@@ -363,9 +367,9 @@ export function PixelCasinoScreen() {
                       <div className={styles.splitHandsRow}>
                         {resolution.playerHands.map((hand, handIndex) => (
                           <div className={styles.miniHand} key={handIndex}>
-                            <div className={styles.miniHandName}>HAND {handIndex + 1} <b>{hand.total}</b></div>
+                            <div className={styles.miniHandName}>HAND {handIndex + 1} <b>{handTotalLabel(visiblePlayerHands?.[handIndex] ?? hand.cards)}</b></div>
                             <div className={styles.cardFan}>
-                              {revealedHandCards(hand.cards, initialCardCount, handIndex, resolution.steps, revealedStepCount).map((card, index) => (
+                              {(visiblePlayerHands?.[handIndex] ?? []).map((card, index) => (
                                 <GameCard key={`split-${handIndex}-${index}-${card.rank}-${card.suit}`} card={card} dealIndex={index} />
                               ))}
                               {showOutcome && feedback && (
@@ -380,8 +384,8 @@ export function PixelCasinoScreen() {
                     <div className={styles.playerHand}>
                       <div className={styles.handName}>YOUR HAND <b>{total ?? "·"}</b></div>
                       <div className={`${styles.cardFan} ${splitSelected ? styles.splitFan : ""}`} key={`player-${handSequence}`}>
-                        {resolution
-                          ? revealedHandCards(resolution.playerHands[0].cards, initialCardCount, 0, resolution.steps, revealedStepCount).map((card, index) => (
+                        {visiblePlayerHands
+                          ? visiblePlayerHands[0].map((card, index) => (
                             <div key={`${index}-${card.rank}-${card.suit}`} className={styles.cardSlot}><GameCard card={card} dealIndex={index === 0 ? 0 : 2} /></div>
                           ))
                           : scenario?.playerCards.map((card, index) => <div key={`${index}-${card.rank}-${card.suit}`} className={styles.cardSlot}><GameCard card={card} dealIndex={index === 0 ? 0 : 2} /></div>)}
