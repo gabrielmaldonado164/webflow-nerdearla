@@ -108,7 +108,8 @@ Deliver in order. The app must stay deployable after every phase.
 - [x] Category classification for each scenario
 - [x] Monte Carlo `simulateEV(hand, dealerUpcard, action, n)` within the CPU budget (~10–20k hands)
 - [x] Short explanation templates per category (work without AI)
-- [ ] Fix review findings: stiff-hand explanations contradict hit/split, simulateEV input validation, scenario weight validation
+- [x] Fix review findings: stiff-hand explanations contradict hit/split, simulateEV input validation, scenario weight validation
+- [ ] (Low priority) Test hardening: undefined-weight test should assert distribution; add miss-path explain tests (hard 16 vs 10, 6-6 vs 4); stiff-hand-hit miss text should say "hit"; surface weight errors through generateScenario
 
 ### Phase 2 — Playable core (Thu 24 AM)
 - [ ] Anonymous player cookie + `players` row
@@ -159,3 +160,4 @@ Append one line per session: date, what was done, and what comes next.
 - 2026-09-23: Phase 0 scaffold done (Next 16.3 + OpenNext + D1/Drizzle + /api/health, verified locally with wrangler dev). Webflow auth OK, no sites yet → project app. Next: interactive first deploy, then Phase 1.
 - 2026-09-23: Phase 0 done. Deployed to https://webflow-nerdearla.webflow.io/ and verified that /api/health persists in D1. Next: Phase 1 (blackjack engine, TDD).
 - 2026-09-23: Phase 1 engine committed (74cde93, 93 tests, review approved). Follow-up fixes for 3 non-blocking findings in progress. Next: Phase 2 (playable core).
+- 2026-09-23: Engine fixes committed (4a311bf, 117 tests, review approved). Phase 1 complete. Next: Phase 2 (playable core).
