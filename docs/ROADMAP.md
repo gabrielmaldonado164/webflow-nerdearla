@@ -32,6 +32,10 @@ Ship **21 Lab**, an educational blackjack trainer ("Learn blackjack by playing, 
 - Limits: 20 s request timeout, 30 s CPU, 128 MB memory, 10 MB worker bundle, 100 MB SQLite on the free plan.
 - CLI: `npx @webflow/webflow-cli` (v2.8.0). Commands: `webflow auth login`, `webflow cloud deploy`.
 - Docs: https://developers.webflow.com/webflow-cloud/llms.txt
+- **Live URL:** https://webflow-nerdearla.webflow.io/ (site `6ab3f86d73c9861e8c44d38b`, environment `main`, mount `/`). IDs are in `webflow.json`.
+- **Deploy command** (non-interactive; commit first so the version tag is clean):
+  `npx @webflow/webflow-cli apps deploy --no-input --site-id 6ab3f86d73c9861e8c44d38b --mount / --environment main --skip-mount-path-check --skip-update-check`
+- CLI deploy gotcha: it deletes `open-next.config.ts` and leaves `next.config.webflow.ts` behind. After each deploy, run `git restore open-next.config.ts` (the helper file is gitignored).
 
 ### LLM provider: Command Code (GOAT plan, API access confirmed)
 - Base URL: `https://api.commandcode.ai/provider/v1`, with OpenAI (`/chat/completions`, `/responses`) and Anthropic (`/messages`) formats.
@@ -93,9 +97,9 @@ Deliver in order. The app must stay deployable after every phase.
 - [x] Add `@opennextjs/cloudflare`, `wrangler.json` with the D1 binding, and Drizzle
 - [x] Create a health API route that writes and reads a row in D1
 - [x] `webflow auth login`
-- [ ] First deploy: the user runs `npx @webflow/webflow-cli apps deploy` interactively once (project app; this sets the workspace ID in `webflow.json`)
-- [ ] Confirm the public URL works, D1 persists, and migrations auto-apply
-- [ ] First commit and push to GitHub (repo: https://github.com/gabrielmaldonado164/webflow-nerdearla)
+- [x] First deploy (interactive, project app). Live: https://webflow-nerdearla.webflow.io/
+- [x] Confirm the public URL works, D1 persists, and migrations auto-apply
+- [x] First commit and push to GitHub (repo: https://github.com/gabrielmaldonado164/webflow-nerdearla)
 
 ### Phase 1 — Blackjack engine (Wed 23) — TDD
 - [ ] Card, Hand, and hand value (hard/soft), blackjack, and pair detection
@@ -152,3 +156,4 @@ Append one line per session: date, what was done, and what comes next.
 
 - 2026-09-23: Idea validated, facts verified, roadmap created. Next: Phase 0.
 - 2026-09-23: Phase 0 scaffold done (Next 16.3 + OpenNext + D1/Drizzle + /api/health, verified locally with wrangler dev). Webflow auth OK, no sites yet → project app. Next: interactive first deploy, then Phase 1.
+- 2026-09-23: Phase 0 done. Deployed to https://webflow-nerdearla.webflow.io/ and verified that /api/health persists in D1. Next: Phase 1 (blackjack engine, TDD).

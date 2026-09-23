@@ -52,3 +52,5 @@ worker-configuration.d.ts
 # local tooling
 .playwright-mcp/
 .atl/
+# webflow cli build artifacts
+next.config.webflow.ts
