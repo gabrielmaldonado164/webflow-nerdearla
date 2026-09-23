@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Card, ResolveHandResult, Scenario } from "@/blackjack";
 import { createInitialRunState, STARTING_LIVES } from "@/training/run";
 
-import { applyDecision, createInitialSessionState, sessionReducer } from "./sessionReducer";
+import { applyDecision, canDeal, canDecide, createInitialSessionState, sessionReducer } from "./sessionReducer";
 
 const PLAYER_HARD_16: Card[] = [
   { rank: "10", suit: "spades" },
@@ -255,6 +255,82 @@ describe("sessionReducer restart", () => {
     });
 
     expect(next.run.bestScore).toBe(99999);
+  });
+});
+
+describe("canDecide", () => {
+  it("is false with no scenario dealt yet", () => {
+    expect(canDecide(createInitialSessionState(), "hit")).toBe(false);
+  });
+
+  it("is true for an available action against a freshly dealt scenario", () => {
+    let state = createInitialSessionState();
+    state = sessionReducer(state, {
+      type: "deal",
+      scenario: buildScenario({ availableActions: ["hit", "stand"] }),
+      holeCard: HOLE_CARD,
+    });
+    expect(canDecide(state, "hit")).toBe(true);
+    expect(canDecide(state, "stand")).toBe(true);
+  });
+
+  it("is false for an action that isn't in availableActions", () => {
+    let state = createInitialSessionState();
+    state = sessionReducer(state, {
+      type: "deal",
+      scenario: buildScenario({ availableActions: ["hit", "stand"] }),
+      holeCard: HOLE_CARD,
+    });
+    expect(canDecide(state, "double")).toBe(false);
+  });
+
+  it("is false while feedback is already pending", () => {
+    let state = createInitialSessionState();
+    state = sessionReducer(state, { type: "deal", scenario: buildScenario(), holeCard: HOLE_CARD });
+    state = sessionReducer(state, {
+      type: "decide",
+      action: "hit",
+      resolution: buildResolution(),
+      decidedAt: "t",
+    });
+    expect(canDecide(state, "stand")).toBe(false);
+  });
+
+  it("is false once the run is over", () => {
+    let state = createInitialSessionState();
+    state = sessionReducer(state, { type: "deal", scenario: buildScenario(), holeCard: HOLE_CARD });
+    for (let i = 0; i < STARTING_LIVES; i++) {
+      state = sessionReducer(state, {
+        type: "decide",
+        action: "stand",
+        resolution: buildResolution(),
+        decidedAt: `wrong-${i}`,
+      });
+      state = sessionReducer(state, { type: "deal", scenario: buildScenario(), holeCard: HOLE_CARD });
+    }
+    expect(state.run.status).toBe("over");
+    expect(canDecide(state, "hit")).toBe(false);
+  });
+});
+
+describe("canDeal", () => {
+  it("is true for a fresh session", () => {
+    expect(canDeal(createInitialSessionState())).toBe(true);
+  });
+
+  it("is false once the run is over", () => {
+    let state = createInitialSessionState();
+    for (let i = 0; i < STARTING_LIVES; i++) {
+      state = sessionReducer(state, { type: "deal", scenario: buildScenario(), holeCard: HOLE_CARD });
+      state = sessionReducer(state, {
+        type: "decide",
+        action: "stand",
+        resolution: buildResolution(),
+        decidedAt: `w-${i}`,
+      });
+    }
+    expect(state.run.status).toBe("over");
+    expect(canDeal(state)).toBe(false);
   });
 });
 

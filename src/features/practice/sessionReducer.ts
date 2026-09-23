@@ -60,27 +60,51 @@ export interface ApplyDecisionResult {
 }
 
 /**
+ * True when `action` would be accepted as a decision against `state`:
+ * there is a dealt scenario, no feedback is already pending, the run
+ * isn't over, and the action is in `scenario.availableActions`.
+ *
+ * Pure and RNG-free, so callers that resolve a hand from a seeded RNG
+ * (e.g. `usePracticeSession`) can check this *before* drawing any cards,
+ * keeping ignored decisions from consuming the RNG and breaking seeded
+ * determinism.
+ */
+export function canDecide(state: SessionState, action: Action): boolean {
+  const { scenario } = state;
+  return (
+    scenario !== null &&
+    state.feedback === null &&
+    state.run.status !== "over" &&
+    scenario.availableActions.includes(action)
+  );
+}
+
+/**
+ * True when a `deal` event would be accepted against `state`: the run
+ * isn't over. Pure and RNG-free, for the same reason as `canDecide` —
+ * callers that deal a scenario + hole card from a seeded RNG should
+ * check this first.
+ */
+export function canDeal(state: SessionState): boolean {
+  return state.run.status !== "over";
+}
+
+/**
  * Applies a `decide` event on its own, returning both the next state and
  * the resulting `DecisionRecord` (or `null` when the event was ignored).
  * This lets a caller tell whether the decision was accepted without
  * comparing state references, so it can fire a side effect (e.g.
  * `onDecision`) exactly once per accepted decision.
  *
- * Ignored (state returned unchanged, by reference) when there is no
- * scenario, feedback is already pending, the run is over, or the action
- * isn't in `scenario.availableActions`.
+ * Ignored (state returned unchanged, by reference) when `canDecide` is
+ * false for this action.
  */
 export function applyDecision(
   state: SessionState,
   event: Extract<SessionEvent, { type: "decide" }>,
 ): ApplyDecisionResult {
   const { scenario } = state;
-  if (
-    !scenario ||
-    state.feedback !== null ||
-    state.run.status === "over" ||
-    !scenario.availableActions.includes(event.action)
-  ) {
+  if (!scenario || !canDecide(state, event.action)) {
     return { state, record: null };
   }
 
@@ -126,7 +150,7 @@ export function sessionReducer(state: SessionState, event: SessionEvent): Sessio
     case "deal": {
       // A fresh hand can't be dealt into a run that's already over; the UI
       // must restart first.
-      if (state.run.status === "over") return state;
+      if (!canDeal(state)) return state;
       return { ...state, scenario: event.scenario, holeCard: event.holeCard, feedback: null };
     }
 

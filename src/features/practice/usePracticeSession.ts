@@ -13,24 +13,17 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import type { Action, Card, Scenario } from "@/blackjack";
-import {
-  DEFAULT_RULES,
-  createRng,
-  dealHoleCard,
-  drawCard,
-  generateScenario,
-  resolveHand,
-} from "@/blackjack";
+import { DEFAULT_RULES, createRng, dealHoleCard, drawCard, generateScenario } from "@/blackjack";
 import type { RunState } from "@/training/run";
 
 import {
-  applyDecision,
   createInitialSessionState,
   sessionReducer,
   type SessionEvent,
   type SessionFeedback,
   type SessionState,
 } from "./sessionReducer";
+import { dealNextHandIfAllowed, resolveActionIfAllowed } from "./sessionRng";
 import { computeSessionStats, type SessionStats } from "./sessionStats";
 import type { DecisionRecord } from "./types";
 
@@ -93,9 +86,14 @@ export function usePracticeSession(
   // gap: the very next call sees the real post-dispatch state immediately.
   const stateRef = useRef<SessionState>(state);
 
-  const dispatchAndSync = useCallback((event: SessionEvent) => {
-    stateRef.current = sessionReducer(stateRef.current, event);
+  // Returns the freshly synced state so callers that need to know what
+  // changed (e.g. `choose`, to read back the decision it just recorded)
+  // don't have to duplicate the sync themselves.
+  const dispatchAndSync = useCallback((event: SessionEvent): SessionState => {
+    const nextState = sessionReducer(stateRef.current, event);
+    stateRef.current = nextState;
     dispatch(event);
+    return nextState;
   }, []);
 
   useEffect(() => {
@@ -110,27 +108,23 @@ export function usePracticeSession(
     // hydration is done.
     const rng = createRng(seed ?? randomSeed());
     rngRef.current = rng;
-    const scenario = generateScenario(rng, DEFAULT_RULES);
-    const holeCard = dealHoleCard(scenario.dealerUpcard, () => drawCard(rng));
-    dispatchAndSync({ type: "deal", scenario, holeCard });
+    const dealt = dealNextHandIfAllowed(stateRef.current, rng, DEFAULT_RULES);
+    if (!dealt) return; // Unreachable on a fresh session; canDeal is always true here.
+    dispatchAndSync({ type: "deal", scenario: dealt.scenario, holeCard: dealt.holeCard });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const choose = useCallback(
     (action: Action) => {
       const rng = rngRef.current;
-      const current = stateRef.current;
-      const { scenario, holeCard } = current;
-      if (!rng || !scenario || !holeCard) return; // Not ready yet.
+      if (!rng) return; // Not ready yet.
 
-      const resolution = resolveHand({
-        playerCards: scenario.playerCards,
-        dealerUpcard: scenario.dealerUpcard,
-        holeCard,
-        action,
-        draw: () => drawCard(rng),
-        rules: DEFAULT_RULES,
-      });
+      // Gated on `canDecide` (via `resolveActionIfAllowed`) *before* any
+      // rng draw: an ignored decision (feedback pending, run over, no
+      // scenario, or an unavailable action) must never consume the rng,
+      // or seeded sessions stop being reproducible.
+      const resolution = resolveActionIfAllowed(stateRef.current, action, rng, DEFAULT_RULES);
+      if (!resolution) return; // Ignored.
 
       const event = {
         type: "decide" as const,
@@ -139,22 +133,22 @@ export function usePracticeSession(
         decidedAt: new Date().toISOString(),
       };
 
-      const { state: nextState, record } = applyDecision(current, event);
-      if (!record) return; // Ignored: no scenario, feedback pending, run over, or action unavailable.
-
-      stateRef.current = nextState;
-      dispatch(event);
-      onDecision?.(record);
+      const nextState = dispatchAndSync(event);
+      onDecision?.(nextState.decisions[nextState.decisions.length - 1]);
     },
-    [onDecision],
+    [onDecision, dispatchAndSync],
   );
 
   const next = useCallback(() => {
     const rng = rngRef.current;
     if (!rng) return;
-    const scenario = generateScenario(rng, DEFAULT_RULES);
-    const holeCard = dealHoleCard(scenario.dealerUpcard, () => drawCard(rng));
-    dispatchAndSync({ type: "deal", scenario, holeCard });
+
+    // Gated on `canDeal` (via `dealNextHandIfAllowed`) before drawing: a
+    // `next()` call once the run is over must not consume the rng either,
+    // since the reducer would drop the dealt hand anyway.
+    const dealt = dealNextHandIfAllowed(stateRef.current, rng, DEFAULT_RULES);
+    if (!dealt) return; // Ignored: the run is over.
+    dispatchAndSync({ type: "deal", scenario: dealt.scenario, holeCard: dealt.holeCard });
   }, [dispatchAndSync]);
 
   const restart = useCallback(() => {
