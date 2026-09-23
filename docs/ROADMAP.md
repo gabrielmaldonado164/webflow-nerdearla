@@ -115,25 +115,20 @@ Deliver in order. The app must stay deployable after every phase.
 ### Phase 2 — Playable core (Thu 24 AM)
 
 **Current state (2026-09-23). Read this first.**
-- Phase 2a UI is built but **NOT committed and NOT reviewed** (working tree):
-  - `src/features/practice/*` (PracticeScreen, Table, PlayingCard, CardBack, ActionBar, FeedbackPanel, SessionStatsPanel, usePracticeSession, sessionStats + tests, types with a `DecisionRecord` seam for Phase 2b).
-  - `src/app/{page,layout}.tsx`, `src/app/globals.css` (casino-table theme), `package.json` (+ `motion`, `@phosphor-icons/react`), unused `public/*.svg` removed.
-  - `src/blackjack/explain.ts` + tests: explanations match the user's actual action; a full sweep test guarantees no generic fallback message. 146 tests pass, lint/tsc/build clean.
+- Phase 2a is **committed and reviewed** on branch `feat/phase-2a-pixel-arcade` (not pushed, not merged, not deployed): 26adc88, 5cb7add, 0894b1a, 4af9ae5, 05da0b7. 149 tests, lint/tsc/build clean. Native review (reliability lens) approved and acknowledged (lineage review-f68efe8b37b30c3c).
+  - `/` renders `src/features/pixel-casino/PixelCasinoScreen` (mobile-first 2.5D pixel-art casino), driven by `src/features/practice/usePracticeSession` (the `onDecision` seam for Phase 2b) and `sessionStats`. Progress is browser-session-only.
   - `CLAUDE.md`: Next.js 16 agent-rules block (auto-added by `next dev`; keep it).
-- Design exploration in progress (uncommitted `design-mockups/`, see `docs/design/mockup-briefs.md`):
-  - Built: directions A-D (mobile + desktop, animated). Owner chose **E = A + B combination**, and also asked for **F = pixel art**. E and F are NOT built yet (agents hit usage limits). Briefs are in `docs/design/mockup-briefs.md`.
-- Update, 2026-09-23: owner rejected the previous visual directions and selected **Pixel Arcade** from the three playable concepts. `/` now opens directly into a mobile-first 2.5D pixel-art casino scene, with a dimensional table, animated deals and outcome feedback, plus session XP, streaks and skill stats. It still uses the Phase 1 strategy engine through `usePracticeSession`; all progress remains browser-session-only. This is a local implementation, not a production deploy.
+  - Rejected design work (mockups A-D, three-concept selector, first flat practice UI) was deleted; `docs/design/mockup-briefs.md` keeps the history.
+- Non-blocking review follow-ups (fold into Phase 2c): renderHook tests for `usePracticeSession` (single decision while feedback is pending, one `onDecision` call per decision); tests for the screen's decision timer and keyboard gating; export the XP award constants from `progress.ts` instead of repeating them in the screen; make the explain sweep test assert that the message family matches `optimalAction`.
 - Next steps, in order:
-  1. Visually QA the selected Pixel Arcade game on mobile and desktop browsers; refine from owner feedback. Do not resume E/F or the three-concept selector.
-  2. Finish review and commit Phase 2a (conventional commits, no AI attribution).
-  3. Preserve the shared decision engine; do not fork strategy rules in the UI.
-  4. Phase 2c: game layer (sound, run mode, combo, mistake juice, dealer hole-card flip and hand resolution).
-  5. Phase 2b: anonymous player cookie + persist decisions to D1 via the `onDecision` seam.
-- Local servers used during design: `npm run dev` (port 3000) and `python3 -m http.server 4000` in `design-mockups/`.
+  1. Owner visual acceptance of Pixel Arcade (any refinement lands as new commits on the branch).
+  2. Phase 2c: game layer (sound, run mode, combo, mistake juice, dealer hole-card flip and hand resolution) + review follow-ups.
+  3. Phase 2b: anonymous player cookie + persist decisions to D1 via the `onDecision` seam.
+  4. Preserve the shared decision engine; do not fork strategy rules in the UI.
 - Competitive landscape (researched): Veintiuno, Blackjack 21 Strategy Trainer, Blackjack Trainer 101, Blackjack Ace, basicstrategy.app, learn-blackjack.com, plus casino-affiliate simulators. Our differentiators: AI coach grounded in the deterministic engine + Monte Carlo EV, gamification, adaptive training, zero-friction web, product-grade design.
 - [ ] Anonymous player cookie + `players` row
-- [~] Practice screen: dealer at the top, player hand, large action buttons, mobile-first (Pixel Arcade 2.5D implemented locally; visual acceptance pending)
-- [~] Decision flow: evaluate → feedback ("Perfect move" / "Not quite") → next hand (built, uncommitted)
+- [~] Practice screen: dealer at the top, player hand, large action buttons, mobile-first (Pixel Arcade 2.5D committed; visual acceptance pending)
+- [~] Decision flow: evaluate → feedback ("Perfect move" / "Not quite") → next hand (committed, reviewed)
 - [ ] Persist every decision in `decisions`
 - [~] Card deal animations and feedback microinteractions (staggered deal, action response, split separation, outcome burst and coach reaction implemented; visual acceptance pending)
 
@@ -198,3 +193,4 @@ Append one line per session: date, what was done, and what comes next.
 - 2026-09-23: Owner chose to keep the current decision-training roadmap; full hand resolution remains outside this phase. Refined Pixel Arcade with a legible S17 rule plaque, an original web-builder coach, physical arcade controls, and strategy-focused result motion. No blackjack rules or persistence behavior changed. Next: owner visual acceptance, Phase 2a review/commit, then Phase 2b persistence.
 - 2026-09-23: Replaced the unclear wooden card shoe with a compact stack of matching card backs and moved the obscured 21 Lab felt print onto a readable front-rail badge. Verified mobile/desktop layout and the existing decision flow; strategy remains unchanged. Next: owner visual acceptance and Phase 2a review/commit.
 - 2026-09-23: Owner wants a web game, not just a polished page. Added Phase 2c (Web Audio SFX, run mode with lives, combo multiplier, mistake shake/vibration, dealer hole-card flip and full hand resolution) before 2b persistence; achievements added to Phase 3. Supersedes the earlier deferral of hand resolution.
+- 2026-09-23: Phase 2a committed on `feat/phase-2a-pixel-arcade` (5 commits, 149 tests, lint/tsc/build clean); native review approved with 4 non-blocking coverage findings recorded as Phase 2c follow-ups. Deleted rejected mockups and dead UI. Next: owner visual acceptance, then Phase 2c.
