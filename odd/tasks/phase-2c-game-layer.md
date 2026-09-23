@@ -28,7 +28,7 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 - [x] T1 — Engine: hand resolution in `src/blackjack/resolve.ts`. Deal a real hole card from a seeded RNG; play out the player's chosen action (hit/stand/double; split plays each hand by basic strategy); dealer draws to 17 and stands on soft 17 per `GameRules`; outcome per hand: win / lose / push / blackjack. Plus review follow-up: explain sweep test asserts the message family matches `optimalAction`.
 - [x] T2 — Training: run mode in `src/training/run.ts`. Pure reducer: 3 lives, a wrong decision costs one, score with combo multiplier (x1, x2 at streak 3, x3 at streak 6…), game over, restart, best score. Plus review follow-up: export XP award constants from `progress.ts` and use them in the screen.
 - [x] T3 — Session: extract a pure practice-session reducer from `usePracticeSession` (single decision while feedback is pending, one `onDecision` per decision, next clears feedback) with tests; wire the hole card, resolution, and run state through it. Pure `keyToCommand` mapping with tests (review follow-up).
-- [ ] T4 — Sound: `src/features/pixel-casino/sound.ts` Web Audio synth (deal, flip, correct, mistake, combo, game over), lazy AudioContext on first interaction, mute persisted with guarded `localStorage`; pure parts tested.
+- [x] T4 — Sound: `src/features/pixel-casino/sound.ts` Web Audio synth (deal, flip, correct, mistake, combo, game over), lazy AudioContext on first interaction, mute persisted with guarded `localStorage`; pure parts tested.
 - [ ] T5 — UI: hole-card flip, dealer draws, outcome banner, lives/score/combo HUD, game over + restart screen, shake + `navigator.vibrate` on mistakes, mute toggle, sound calls. Mobile and desktop QA via screenshots.
 
 ## Delivery
@@ -52,6 +52,8 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 - 2026-09-23: T3 done on `feat/2c-t3-session-reducer`: 0feb21d pure `sessionReducer` + `applyDecision` (deal/decide/restart; decide ignored when pending, over, or unavailable; one record per accepted decision); b254869 `keyToCommand`; 0950a79 `usePracticeSession` on `useReducer` with a synced ref so `onDecision` fires once per accepted decision, exposes holeCard, run, feedback.resolution, restart. RED/GREEN observed; 217 tests, tsc, lint, build clean.
 
 - 2026-09-23: T3 review approved. Follow-ups (fold into T4 start): `choose`/`next` consume the seeded RNG before the accept/ignore gate, breaking seeded determinism — gate on pending/over/available before drawing and add a seeded-determinism test; hook-level once-semantics stay unproved without a DOM test harness (accepted: logic lives in the tested pure `applyDecision`; keep `choose` using one sync path).
+- 2026-09-23: T3 follow-up on `feat/2c-t3-session-reducer` (0e87c89): pure `canDecide`/`canDeal`, `sessionRng.ts` gates RNG draws before accept/ignore, seeded-determinism test with interleaved ignored events, single sync path in `choose`. RED/GREEN observed.
+- 2026-09-23: T4 done on `feat/2c-t4-sound`: 764ee21 `sound.ts` (cueNotes pure data, lazy AudioContext player, no-op on server/unsupported), f914045 `preferences.ts` (guarded localStorage for muted + best score), ba510fd `useSound` hook (not wired yet). RED/GREEN observed; 269 tests, tsc, lint, build clean.
 
 ## Next step
-T4 on `feat/2c-t4-sound` (T3 review done). Known interim gap: after 3 mistakes the run is over and choices are ignored, but the game-over screen only arrives in T5 (keyboard Enter/R restarts meanwhile).
+T5 on `feat/2c-t5-game-ui` (after the T3-fix + T4 review). Known interim gap: after 3 mistakes the run is over and choices are ignored, but the game-over screen only arrives in T5 (keyboard Enter/R restarts meanwhile).
