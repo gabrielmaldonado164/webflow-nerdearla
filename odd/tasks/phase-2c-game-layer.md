@@ -34,7 +34,7 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 ## Delivery
 - Strategy: `ask-on-risk` → owner chose **feature-branch-chain** (2026-09-23). One branch per task, stacked: `feat/phase-2a-pixel-arcade` → `feat/2c-t1-hand-resolution` → `feat/2c-t2-run-mode` → `feat/2c-t3-session-reducer` → `feat/2c-t4-sound` → `feat/2c-t5-game-ui`. Each PR targets the previous branch; merge in order.
 - Forecast: ~1200–1600 authored changed lines across T1–T5.
-- Last reviewed boundary: 449275d (T3-fix + T4 lineage review-df3adeb3034bd8b1 approved + acknowledged; earlier: review-5fdae880c51aa8be, review-d032dc5df892a740, review-7659ea5ddda7d84c).
+- Last reviewed boundary: d45a2e3 (T4-fix + T5 lineage review-2e9a2e46ccb53347 approved + acknowledged; before: 449275d, T3-fix + T4 lineage review-df3adeb3034bd8b1 approved + acknowledged; earlier: review-5fdae880c51aa8be, review-d032dc5df892a740, review-7659ea5ddda7d84c).
 
 ## Route per task
 | Task | Route | Trigger evidence |
@@ -60,5 +60,7 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 - 2026-09-23: Owner asked to fix the split banner placement and hand counter, and to make the coach casino-themed. Done on `feat/2c-t5-game-ui`: db80600 banners anchored to each player hand; a3fe03f `currentHandNumber` (counts hands in the current run, resets on restart; tested); 9f99125 pixel-art croupier drawn as SVG from `croupierSprite.ts` data (26x28, idle/blink/celebrate/teach/gameOver poses, reduced-motion safe; sprite data tested), `web-builder-coach.png` removed. 320 tests, tsc, lint, build clean. Note: intermediate commit db80600 renders the old coach oversized in isolation; HEAD is correct.
 - 2026-09-23: Owner rejected the hand-drawn croupier; it must match the old robot's quality (an AI-generated raster PNG), which the owner will generate with Codex. Done on `feat/2c-t5-game-ui`: 30ef50c removed the croupier (coach slot empty until the PNG arrives); 0c4381d pure `handTotalLabel` so dealer/player totals follow the visible cards and read BUST over 21 (previously jumped to the final total before draws landed; RED/GREEN observed); 0e2cf3e game over freezes the table (no reveal timeline, banners, stamp, or reveal/mistake sounds behind the overlay; console `inert` and dimmed). Browser-verified BUST and game-over freeze + restart. 317 tests, tsc, lint, build clean.
 
+- 2026-09-23: T4-fix + T5 review approved and acknowledged (lineage review-2e9a2e46ccb53347, base 10410bb..d45a2e3, reliability lens). Non-blocking follow-ups: (WARNING) mute toggle is a no-op when localStorage is unavailable, since `toggleMuted` reads back `loadMuted()` (keep an in-memory fallback, add a test); hook-level `onDecision` once-semantics untested; screen reveal timeline / game-over freeze / timer cleanup untested (extract a pure cue/timer planner); `handNumber` restart test is vacuous (assert `run.decisions` is 0 after restart at reducer level).
+
 ## Next step
-Resume on `feat/2c-t5-game-ui`. 1) T5 native review from base 10410bb (consent pending with the owner). 2) Integrate the Codex-generated croupier PNG when the owner provides it (render like the old robot: `next/image` in the `.coach` slot with bubble + celebrate hop). 3) Push and open PRs in chain order only if the owner asks. 4) Phase 2b persistence.
+Resume on `feat/2c-t5-game-ui`. 1) Fix the T5 review follow-ups above (mute fallback first) if the owner approves. 2) Push and open PRs in chain order only if the owner asks. 3) Phase 2b persistence.
