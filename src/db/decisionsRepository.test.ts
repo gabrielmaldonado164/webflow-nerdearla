@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Card } from "@/blackjack";
 import type { DecisionRow } from "@/player/recordDecision";
 
-import { decisionRowToInsertValues } from "./decisionsRepository";
+import { decisionRowFromSelectValues, decisionRowToInsertValues } from "./decisionsRepository";
 
 function card(rank: Card["rank"], suit: Card["suit"] = "spades"): Card {
   return { rank, suit };
@@ -49,5 +49,44 @@ describe("decisionRowToInsertValues", () => {
   it("round-trips a false isCorrect value (not just truthy passthrough)", () => {
     const values = decisionRowToInsertValues({ ...ROW, isCorrect: false });
     expect(values.isCorrect).toBe(false);
+  });
+});
+
+describe("decisionRowFromSelectValues", () => {
+  it("decodes the JSON text columns back into structured fields", () => {
+    const selectValues = decisionRowToInsertValues(ROW);
+
+    const row = decisionRowFromSelectValues(selectValues);
+
+    expect(row.playerCards).toEqual(ROW.playerCards);
+    expect(row.dealerUpcard).toEqual(ROW.dealerUpcard);
+    expect(row.availableActions).toEqual(ROW.availableActions);
+  });
+
+  it("passes scalar fields through unchanged", () => {
+    const selectValues = decisionRowToInsertValues(ROW);
+
+    const row = decisionRowFromSelectValues(selectValues);
+
+    expect(row.id).toBe(ROW.id);
+    expect(row.playerId).toBe(ROW.playerId);
+    expect(row.userAction).toBe(ROW.userAction);
+    expect(row.optimalAction).toBe(ROW.optimalAction);
+    expect(row.isCorrect).toBe(ROW.isCorrect);
+    expect(row.category).toBe(ROW.category);
+    expect(row.createdAt).toBe(ROW.createdAt);
+  });
+
+  it("round-trips a false isCorrect value", () => {
+    const selectValues = decisionRowToInsertValues({ ...ROW, isCorrect: false });
+
+    const row = decisionRowFromSelectValues(selectValues);
+
+    expect(row.isCorrect).toBe(false);
+  });
+
+  it("is the exact inverse of decisionRowToInsertValues for a full row", () => {
+    const roundTripped = decisionRowFromSelectValues(decisionRowToInsertValues(ROW));
+    expect(roundTripped).toEqual(ROW);
   });
 });
