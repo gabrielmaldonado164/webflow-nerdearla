@@ -158,6 +158,21 @@ describe("handleCoachStreamRequest", () => {
 
   it("does not refund a stream interrupted after the first chunk was delivered", async () => {
     const releaseCoachCall = vi.fn().mockResolvedValue(undefined);
+    // Yields one chunk, then throws on the next pull — simulating the
+    // provider iterator dying mid-stream, after text was already handed
+    // to the caller.
+    const interruptingStream: AsyncIterable<string> = {
+      [Symbol.asyncIterator]() {
+        let calls = 0;
+        return {
+          next: async () => {
+            calls++;
+            if (calls === 1) return { done: false, value: "first chunk" };
+            throw new Error("provider connection dropped");
+          },
+        };
+      },
+    };
     const deps = baseDeps({
       repo: {
         ensurePlayer: vi.fn().mockResolvedValue(undefined),
@@ -165,15 +180,57 @@ describe("handleCoachStreamRequest", () => {
         releaseCoachCall,
         getCoachUsage: vi.fn().mockResolvedValue(usage(17)),
       },
-      startCoachStream: vi.fn().mockResolvedValue(textStream("first chunk")),
+      startCoachStream: vi.fn().mockResolvedValue(interruptingStream),
     });
     const result = await handleCoachStreamRequest(WHY_BODY, deps);
     expect(result.kind).toBe("stream");
     if (result.kind !== "stream") throw new Error("expected a stream result");
-    // Simulate the route draining the rest of the stream and hitting an
-    // error mid-way: the handler already committed to "stream" and must
-    // not be involved in refunding at that point.
+    // Drain the rest of the stream the way route.ts does, and hit the
+    // interruption.
+    await expect(result.iterator.next()).rejects.toThrow("provider connection dropped");
+    // The handler already committed to "stream" and must not be involved
+    // in refunding once the caller is draining the iterator itself.
     expect(releaseCoachCall).not.toHaveBeenCalled();
+  });
+
+  it("omits `remaining` from the 503 body when the refund itself fails", async () => {
+    const deps = baseDeps({
+      repo: {
+        ensurePlayer: vi.fn().mockResolvedValue(undefined),
+        reserveCoachCall: vi.fn().mockResolvedValue(true),
+        releaseCoachCall: vi.fn().mockRejectedValue(new Error("release failed")),
+        getCoachUsage: vi.fn().mockResolvedValue(usage(17)),
+      },
+      startCoachStream: vi.fn().mockRejectedValue(new Error("provider down")),
+    });
+    const result = await handleCoachStreamRequest(WHY_BODY, deps);
+    expect(result).toEqual({
+      kind: "error",
+      status: 503,
+      body: { error: "coach unavailable" },
+      setCookie: expect.objectContaining({ name: "lab_player", value: "player-1" }),
+    });
+  });
+
+  it("omits `remaining` from the 503 body when the refund succeeds but the post-refund read fails", async () => {
+    const deps = baseDeps({
+      repo: {
+        ensurePlayer: vi.fn().mockResolvedValue(undefined),
+        reserveCoachCall: vi.fn().mockResolvedValue(true),
+        releaseCoachCall: vi.fn().mockResolvedValue(undefined),
+        getCoachUsage: vi.fn()
+          .mockResolvedValueOnce(usage(17)) // post-reservation read
+          .mockRejectedValueOnce(new Error("post-refund read failed")),
+      },
+      startCoachStream: vi.fn().mockRejectedValue(new Error("provider down")),
+    });
+    const result = await handleCoachStreamRequest(WHY_BODY, deps);
+    expect(result).toEqual({
+      kind: "error",
+      status: 503,
+      body: { error: "coach unavailable" },
+      setCookie: expect.objectContaining({ name: "lab_player", value: "player-1" }),
+    });
   });
 
   it("does not leak the reserved slot or 503 when the post-reserve usage read fails", async () => {

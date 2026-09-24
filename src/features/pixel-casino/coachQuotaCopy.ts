@@ -39,13 +39,27 @@ export function coachQuotaCopy({ limit, remaining, outcomeKind, refunded }: Coac
 }
 
 /**
- * Guards the usage-fetch-vs-stream-outcome race in `CoachPanel`: the
+ * Merges a `GET /api/coach/usage` response into the panel's quota state.
+ * Resolves the usage-fetch-vs-stream-outcome race in `CoachPanel`: the
  * usage `GET` fired on open and the auto-asked "why" stream can resolve
- * in either order. Once any stream outcome has already updated quota
- * (`outcomeKind !== null`), a later-resolving usage response is stale by
- * definition — the stream outcome is always at least as recent — so it
- * must be ignored instead of overwriting a newer `remaining`.
+ * in either order.
+ *
+ * `limit` only ever comes from this usage fetch (a stream outcome never
+ * carries it), so it is always applied — dropping the whole response
+ * once a stream outcome had landed used to hide the counter forever.
+ * `remaining` is applied from usage only when no stream outcome has
+ * already provided a non-null `remaining`; a stream outcome's non-null
+ * `remaining` is always at least as recent as this usage fetch and wins.
  */
-export function shouldApplyUsageFetch(current: CoachQuotaState): boolean {
-  return current.outcomeKind === null;
+export function mergeUsageIntoQuota(
+  current: CoachQuotaState,
+  usage: { limit: number; remaining: number },
+): CoachQuotaState {
+  const hasNewerRemaining = current.outcomeKind !== null && current.remaining !== null;
+  return {
+    limit: usage.limit,
+    remaining: hasNewerRemaining ? current.remaining : usage.remaining,
+    outcomeKind: current.outcomeKind,
+    refunded: current.refunded,
+  };
 }

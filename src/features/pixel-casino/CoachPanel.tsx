@@ -3,7 +3,7 @@
 import { ChatCircleDots, Sparkle, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { coachQuotaCopy, shouldApplyUsageFetch, type CoachQuotaState } from "./coachQuotaCopy";
+import { coachQuotaCopy, mergeUsageIntoQuota, type CoachQuotaState } from "./coachQuotaCopy";
 import type { CoachEvidence, CoachHand } from "./coachRequest";
 import { fetchCoachEvidence, fetchCoachUsage, streamCoachReply } from "./coachRequest";
 import styles from "./CoachPanel.module.css";
@@ -70,9 +70,7 @@ export function CoachPanel({ open, mode, hand, template, onClose }: CoachPanelPr
     const usageController = new AbortController();
     void fetchCoachUsage(usageController.signal).then((usage) => {
       if (usageController.signal.aborted || !usage) return;
-      setQuota((previous) => shouldApplyUsageFetch(previous)
-        ? { limit: usage.limit, remaining: usage.remaining, outcomeKind: previous.outcomeKind, refunded: previous.refunded }
-        : previous);
+      setQuota((previous) => mergeUsageIntoQuota(previous, usage));
     });
     return () => usageController.abort();
   }, [open]);

@@ -120,19 +120,30 @@ export async function handleCoachStreamRequest(
   // Refunds the slot reserved above when the provider fails before any
   // text is delivered, so the player never loses a question to an
   // outage. A stream interrupted after text was sent still counts.
+  //
+  // Returns the post-refund `remaining` ONLY when the release itself
+  // succeeded AND the follow-up usage read succeeded — that is the only
+  // case the server can vouch for as a confirmed refund. Either failure
+  // returns `null`, and `unavailableBody` below omits `remaining` from
+  // the response body entirely rather than reporting a stale or
+  // unconfirmed count as if it were a server-confirmed refund.
   const refund = async (): Promise<number | null> => {
     try {
       await deps.repo.releaseCoachCall(playerId, today);
     } catch (error) {
       console.error("Failed to refund coach call:", error);
+      return null;
     }
     try {
       return (await deps.repo.getCoachUsage(playerId, today)).remaining;
     } catch (error) {
       console.error("Failed to read coach usage after refund:", error);
-      return remaining;
+      return null;
     }
   };
+
+  const unavailableBody = (refunded: number | null): Record<string, unknown> =>
+    refunded === null ? UNAVAILABLE_BODY : { error: "coach unavailable", remaining: refunded };
 
   try {
     const iterable = await deps.startCoachStream(parsed.value, playerId, provider);
@@ -142,12 +153,12 @@ export async function handleCoachStreamRequest(
     const first = await iterator.next();
     if (first.done) {
       const refunded = await refund();
-      return { kind: "error", status: 503, body: { error: "coach unavailable", remaining: refunded }, setCookie };
+      return { kind: "error", status: 503, body: unavailableBody(refunded), setCookie };
     }
     return { kind: "stream", remaining, setCookie, first: first.value, iterator };
   } catch (error) {
     console.error("Coach provider unavailable:", error);
     const refunded = await refund();
-    return { kind: "error", status: 503, body: { error: "coach unavailable", remaining: refunded }, setCookie };
+    return { kind: "error", status: 503, body: unavailableBody(refunded), setCookie };
   }
 }

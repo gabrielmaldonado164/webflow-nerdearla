@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { coachQuotaCopy, shouldApplyUsageFetch } from "./coachQuotaCopy";
+import { coachQuotaCopy, mergeUsageIntoQuota } from "./coachQuotaCopy";
 
 describe("coachQuotaCopy", () => {
   it("hides the counter and notes when no usage or outcome is known yet", () => {
@@ -68,15 +68,31 @@ describe("coachQuotaCopy", () => {
   });
 });
 
-describe("shouldApplyUsageFetch", () => {
-  it("applies the usage fetch when no stream outcome has landed yet", () => {
-    expect(shouldApplyUsageFetch({ limit: null, remaining: null, outcomeKind: null, refunded: false })).toBe(true);
+describe("mergeUsageIntoQuota", () => {
+  it("applies both limit and remaining from usage before any stream outcome has landed", () => {
+    expect(mergeUsageIntoQuota(
+      { limit: null, remaining: null, outcomeKind: null, refunded: false },
+      { limit: 20, remaining: 17 },
+    )).toEqual({ limit: 20, remaining: 17, outcomeKind: null, refunded: false });
   });
 
-  it("ignores a usage fetch resolving after a stream outcome already updated quota", () => {
-    expect(shouldApplyUsageFetch({ limit: 20, remaining: 17, outcomeKind: "ok", refunded: false })).toBe(false);
-    expect(shouldApplyUsageFetch({ limit: 20, remaining: 0, outcomeKind: "limit", refunded: false })).toBe(false);
-    expect(shouldApplyUsageFetch({ limit: 20, remaining: 18, outcomeKind: "unavailable", refunded: true })).toBe(false);
+  it("always applies the usage limit, and keeps a stream outcome's non-null remaining", () => {
+    expect(mergeUsageIntoQuota(
+      { limit: null, remaining: 12, outcomeKind: "ok", refunded: false },
+      { limit: 20, remaining: 17 },
+    )).toEqual({ limit: 20, remaining: 12, outcomeKind: "ok", refunded: false });
+
+    expect(mergeUsageIntoQuota(
+      { limit: null, remaining: 0, outcomeKind: "limit", refunded: false },
+      { limit: 20, remaining: 17 },
+    )).toEqual({ limit: 20, remaining: 0, outcomeKind: "limit", refunded: false });
+  });
+
+  it("applies the usage remaining when the last stream outcome's remaining is null", () => {
+    expect(mergeUsageIntoQuota(
+      { limit: null, remaining: null, outcomeKind: "unavailable", refunded: false },
+      { limit: 20, remaining: 17 },
+    )).toEqual({ limit: 20, remaining: 17, outcomeKind: "unavailable", refunded: false });
   });
 });
 
