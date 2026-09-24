@@ -64,10 +64,39 @@ describe("sendDecision", () => {
   });
 
   it("swallows a rejected fetch without an unhandled rejection", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
-    sendDecision(RECORD);
-    // Let the rejection's .catch handler settle.
-    await Promise.resolve();
-    await Promise.resolve();
+    // Deliberately a plain function, not `vi.fn()`: vitest's spy wrapper
+    // internally attaches its own `.then(onFulfilled, onRejected)` to
+    // every mocked call that returns a Promise (to record
+    // `mock.settledResults`), which would itself "handle" the rejection
+    // and mask whether sendDecision's own .catch() is doing anything.
+    let callCount = 0;
+    const plainFetch = (): Promise<Response> => {
+      callCount += 1;
+      return Promise.reject(new Error("offline"));
+    };
+    vi.stubGlobal("fetch", plainFetch);
+
+    const unhandledRejections: unknown[] = [];
+    const onUnhandledRejection = (reason: unknown) => {
+      unhandledRejections.push(reason);
+    };
+    process.on("unhandledRejection", onUnhandledRejection);
+
+    try {
+      sendDecision(RECORD);
+      expect(callCount).toBe(1);
+
+      // Give the event loop a few turns: Node only flags an
+      // unhandledRejection after the current microtask queue drains, so
+      // a single `await Promise.resolve()` isn't a reliable enough
+      // delay. If sendDecision's internal .catch() were ever removed,
+      // this would fail via a non-empty unhandledRejections array.
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(unhandledRejections).toHaveLength(0);
+    } finally {
+      process.off("unhandledRejection", onUnhandledRejection);
+    }
   });
 });
