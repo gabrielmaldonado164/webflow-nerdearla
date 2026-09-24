@@ -45,8 +45,13 @@ export interface PlayerStats {
 /** Minimal shape `computePlayerStats` actually needs from a `DecisionRow`. */
 export type PlayerStatsDecision = Pick<DecisionRow, "category" | "isCorrect">;
 
-/** Fixed order used for iteration and as the tie-break for strongest/weakest. */
-const CATEGORIES: readonly ScenarioCategory[] = ["hard", "soft", "pair"];
+/**
+ * Fixed order used for iteration and as the tie-break for
+ * strongest/weakest. Exported for reuse by achievements
+ * (`src/player/achievements.ts`, Phase 3 T2), which needs the same
+ * category set to check "every category attempted".
+ */
+export const CATEGORIES: readonly ScenarioCategory[] = ["hard", "soft", "pair"];
 
 /**
  * Minimum attempts a category needs before it's eligible to be reported as
