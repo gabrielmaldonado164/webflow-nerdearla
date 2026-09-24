@@ -14,9 +14,16 @@ export interface GameOverOverlayProps {
   /** This run's accuracy (0-100), or `null` if no decision was made. */
   accuracy: number | null;
   onRestart: () => void;
+  /**
+   * Short Skill Map summary line (Phase 3 T4, `skillMapSummary.ts`):
+   * weakest category + accuracy, an earned-badge count, or an
+   * encouraging generic line when there isn't enough data yet. `null`
+   * while the underlying data hasn't loaded at all.
+   */
+  summary?: string | null;
 }
 
-export function GameOverOverlay({ score, bestScore, isNewBest, accuracy, onRestart }: GameOverOverlayProps) {
+export function GameOverOverlay({ score, bestScore, isNewBest, accuracy, onRestart, summary }: GameOverOverlayProps) {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -45,6 +52,7 @@ export function GameOverOverlay({ score, bestScore, isNewBest, accuracy, onResta
           <div><small>BEST</small><strong>{bestScore}</strong></div>
           <div><small>ACCURACY</small><strong>{accuracy === null ? "--" : `${accuracy}%`}</strong></div>
         </div>
+        {summary && <p className={styles.skillSummary}>{summary}</p>}
         <button type="button" className={styles.restartButton} onClick={onRestart}>
           <ArrowClockwise weight="bold" aria-hidden="true" /> RESTART <kbd>ENTER</kbd>
         </button>

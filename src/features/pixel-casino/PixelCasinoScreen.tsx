@@ -3,7 +3,7 @@
 import { ArrowRight, BookOpen, Lightning, Sparkle, Spade, Target, Trophy } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Action, Card, ScenarioCategory, Suit } from "@/blackjack";
 import { handValue, rankValue } from "@/blackjack";
@@ -25,6 +25,11 @@ import {
   revealedHandCards,
 } from "./revealSchedule";
 import { computeRunAccuracy, isNewBestScore } from "./runSummary";
+import { SkillMapPanel } from "./SkillMapPanel";
+import { computeToggleWeights } from "./skillMapWeights";
+import { summarizeForGameOver } from "./skillMapSummary";
+import { buildSkillMapViewModel } from "./skillMapViewModel";
+import { useSkillMapData } from "./useSkillMapData";
 import { useSound } from "./useSound";
 import styles from "./PixelCasinoScreen.module.css";
 
@@ -126,6 +131,7 @@ export function PixelCasinoScreen() {
     next,
     restart,
     setBestScore,
+    setWeights,
   } = usePracticeSession({ onDecision: sendDecision });
   const { muted, toggleMuted, play } = useSound();
   const [showClue, setShowClue] = useState(false);
@@ -133,6 +139,30 @@ export function PixelCasinoScreen() {
   const [handSequence, setHandSequence] = useState(0);
   const pendingTimer = useRef<number | null>(null);
   const reduceMotion = useReducedMotion();
+
+  // --- Skill Map (Phase 3 T4) -----------------------------------------
+  const [skillMapOpen, setSkillMapOpen] = useState(false);
+  const [focusWeakness, setFocusWeakness] = useState(false);
+  const runOverForSkillMap = run.status === "over";
+  const skillMapActive = skillMapOpen || runOverForSkillMap;
+  const { data: skillMapServerData } = useSkillMapData({
+    active: skillMapActive,
+    decisionsCount: decisions.length,
+  });
+  const skillMapViewModel = useMemo(
+    () => buildSkillMapViewModel({ server: skillMapServerData, session: stats }),
+    [skillMapServerData, stats],
+  );
+  const gameOverSummary = useMemo(() => summarizeForGameOver(skillMapViewModel), [skillMapViewModel]);
+
+  // Applies adaptive practice weighting (T3's weightsFromStats) as soon
+  // as server stats are available, and re-applies it whenever the
+  // "Practice weakness" toggle or the fetched stats change. With no
+  // server stats yet (offline, or a brand-new player), this resolves to
+  // `undefined` — the engine's own default uniform weighting.
+  useEffect(() => {
+    setWeights(computeToggleWeights(skillMapServerData?.stats ?? null, focusWeakness));
+  }, [skillMapServerData, focusWeakness, setWeights]);
 
   // Kept current without re-triggering effects that shouldn't fire again
   // just because the mute state (and so `play`'s identity) changed
@@ -272,6 +302,10 @@ export function PixelCasinoScreen() {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      // The Skill Map panel owns Esc itself and must be the only thing
+      // reacting to keys while it's open — the table's H/S/D/P/Enter
+      // shortcuts must not fire underneath it (T4 requirement).
+      if (skillMapOpen) return;
       if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
       if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
       // Enter also activates a focused button (e.g. "Deal next hand"); let
@@ -292,7 +326,7 @@ export function PixelCasinoScreen() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [feedback, scenario, run.status, chooseAction, nextHand, restart]);
+  }, [feedback, scenario, run.status, chooseAction, nextHand, restart, skillMapOpen]);
 
   const resolution = feedback?.resolution ?? null;
   const isSplit = (resolution?.playerHands.length ?? 0) > 1;
@@ -317,7 +351,15 @@ export function PixelCasinoScreen() {
     <main className={styles.game}>
       <header className={styles.topHud}>
         <div className={styles.brand}><span className={styles.brandSymbol}><Spade weight="fill" aria-hidden="true" /></span><div><strong>21 LAB</strong><small>PLAY · LEARN · LEVEL UP</small></div></div>
-        <Hud run={run} muted={muted} onToggleMuted={toggleMuted} comboPulseToken={comboPulseToken} reduceMotion={Boolean(reduceMotion)} />
+        <Hud
+          run={run}
+          muted={muted}
+          onToggleMuted={toggleMuted}
+          comboPulseToken={comboPulseToken}
+          reduceMotion={Boolean(reduceMotion)}
+          onOpenSkillMap={() => setSkillMapOpen(true)}
+          skillMapOpen={skillMapOpen}
+        />
       </header>
 
       <div className={styles.gameLayout}>
@@ -409,6 +451,7 @@ export function PixelCasinoScreen() {
                   isNewBest={isNewBestScore(enteringBestScore, run.score)}
                   accuracy={computeRunAccuracy(decisions, run.decisions)}
                   onRestart={restart}
+                  summary={gameOverSummary}
                 />
               )}
             </AnimatePresence>
@@ -442,6 +485,14 @@ export function PixelCasinoScreen() {
           <small className={styles.webflowCredit}>Built on Webflow Cloud. Independent 21 Lab project.</small>
         </aside>
       </div>
+
+      <SkillMapPanel
+        open={skillMapOpen}
+        onClose={() => setSkillMapOpen(false)}
+        viewModel={skillMapViewModel}
+        focusWeakness={focusWeakness}
+        onToggleFocusWeakness={() => setFocusWeakness((value) => !value)}
+      />
     </main>
   );
 }
