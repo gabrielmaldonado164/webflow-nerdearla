@@ -21,6 +21,7 @@ Players can see how many AI coach questions remain today, can tell a reached lim
 
 - [x] T1 Server: `releaseCoachCall` + `getCoachUsage` (test-first), refund on provider failure, `X-Coach-Remaining` header on success, `remaining` in 429/503 bodies, `GET /api/coach/usage`.
 - [x] T2 Client: typed `streamCoachReply` outcome (`ok` / `limit` / `unavailable` with remaining), usage fetch, counter and limit message in `CoachPanel`.
+- [ ] T2b Review follow-ups (review-e2b2b3091aaef17b approved + acknowledged, advisory findings accepted as in-scope fixes): refund note only for server-confirmed refunds (not merged stale remaining, not empty 200); post-reserve usage read must not leak a slot; usage fetch must not overwrite a newer stream outcome; extract the stream route into a tested handler that proves refund on provider failure.
 - [ ] T3 Local Cloudflare preview smoke + browser check of the counter, then docs.
 
 ## Constraints
@@ -31,6 +32,7 @@ Players can see how many AI coach questions remain today, can tell a reached lim
 
 ## Route log
 
+- T2b: delegated direct (writer trigger: route, handler, client, panel).
 - T1+T2: delegated direct (writer trigger: 2+ non-trivial files across server and client).
 
 ## Progress
