@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_RULES, createRng } from "@/blackjack";
+import { DEFAULT_RULES, createRng, generateScenario } from "@/blackjack";
 import type { Action, Card, Scenario } from "@/blackjack";
 
 import { dealNextHandIfAllowed, resolveActionIfAllowed } from "./sessionRng";
@@ -91,14 +91,24 @@ describe("dealNextHandIfAllowed weighting (Phase 3 T3)", () => {
   });
 
   it("behaves identically to omitting weights when weights is explicitly undefined", () => {
-    const state = createInitialSessionState();
+    // The previous version of this test only compared two
+    // `dealNextHandIfAllowed` calls against each other. Since the
+    // fourth parameter is optional, an omitted argument and an
+    // explicit `undefined` are indistinguishable to JS at the call
+    // site — both calls take the exact same code path inside
+    // `dealNextHandIfAllowed`, so that comparison could never fail and
+    // proved nothing. This instead checks the actual claim: that
+    // forwarding `{ weights: undefined }` into `generateScenario` (what
+    // `dealNextHandIfAllowed` does) produces the same scenario as
+    // calling `generateScenario` directly with no options object at
+    // all (the engine's true default path).
     const rngA = createRng(11);
     const rngB = createRng(11);
 
-    const withoutParam = dealNextHandIfAllowed(state, rngA, DEFAULT_RULES);
-    const withUndefined = dealNextHandIfAllowed(state, rngB, DEFAULT_RULES, undefined);
+    const direct = generateScenario(rngA, DEFAULT_RULES);
+    const viaDealNextHand = dealNextHandIfAllowed(createInitialSessionState(), rngB, DEFAULT_RULES, undefined);
 
-    expect(withUndefined).toEqual(withoutParam);
+    expect(viaDealNextHand?.scenario).toEqual(direct);
   });
 });
 
