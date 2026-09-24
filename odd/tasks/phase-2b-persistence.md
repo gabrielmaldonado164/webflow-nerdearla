@@ -117,5 +117,7 @@ T2's smoke test (above) already exercised `POST /api/decisions` directly via `cu
   - **2922dad** `test(practice): make the env-restore regression test self-contained` — the original test asserted `process.env.NEXT_PUBLIC_BASE_PATH` was `undefined` after cleanup, but only by relying on the ambient environment and on running after another test's `afterEach` had already restored it. Rewrote it to capture and restore the actual original value itself (`try`/`finally`, deleting vs. reassigning depending on whether it was originally set) and added a second test that explicitly covers the originally-unset case (deletes the key itself first). Both pass when run in isolation (`vitest run -t "<name>"`), confirming no order dependency remains. This is a test-quality fix (SUGGESTION severity, no production code involved), so no RED/GREEN cycle applies in the usual sense — said so honestly rather than staging a fake RED; verified order-independence directly instead.
   - Checks (after all three commits): `npm test` 35 files / 406 tests passed; `npx tsc --noEmit` clean; `npm run lint` clean; `npm run build` clean (Next 16.3.6, Turbopack).
 
+- 2026-09-23: T5 assessed from fe27415: medium, `review_due=false` (`under_budget`, 193 lines). Stays pending in the slice; the next commit that reaches the budget reviews from boundary 5ca76cf. Parent spot check: `npm test` 406/406.
+
 ## Next step
 Phase 3 — Stats & Skill Map (`docs/ROADMAP.md` Phase 3 checklist).
