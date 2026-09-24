@@ -26,7 +26,7 @@ Progress is browser-session-only. Phase 3 (stats, skill map) and Phase 4 (AI coa
 `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`.
 
 ## Tasks
-- [ ] T1 — Data + domain: Drizzle `players` (id uuid pk, created_at, display_name nullable) and `decisions` (per ROADMAP data model) tables, generated migration in `drizzle/`. Pure `src/player/`: player id validation/generation, decision payload parsing/validation, and `recordDecision(input, repo)` that re-grades with the engine and returns the row to insert (rejects invalid cards/actions).
+- [x] T1 — Data + domain: Drizzle `players` (id uuid pk, created_at, display_name nullable) and `decisions` (per ROADMAP data model) tables, generated migration in `drizzle/`. Pure `src/player/`: player id validation/generation, decision payload parsing/validation, and `recordDecision(input, repo)` that re-grades with the engine and returns the row to insert (rejects invalid cards/actions).
 - [ ] T2 — API: `POST /api/decisions` thin route: read or mint the player cookie (insert `players` row when new), parse body, call `recordDecision` with a D1-backed repo, respond `201`/`400`. Cookie helpers tested as pure functions.
 - [ ] T3 — Client: pure request builder (base path, JSON body from `DecisionRecord`); fire-and-forget sender (`keepalive`, errors swallowed); wire it into `PixelCasinoScreen` via `usePracticeSession({ onDecision })` with a stable callback. Update `docs/ROADMAP.md` (Phase 2b checkboxes, stale Phase 2c "T5 review pending" state, Progress Log).
 
@@ -47,6 +47,16 @@ Progress is browser-session-only. Phase 3 (stats, skill map) and Phase 4 (AI coa
 
 ## Progress
 - 2026-09-23: Document created. Owner approved starting Phase 2b.
+- 2026-09-23: T1 done on `feat/2b-t1-persistence-domain` (4c6d19a `feat(player): add players/decisions schema and decision domain`). Added `players`/`decisions` Drizzle tables and generated migration `drizzle/0001_safe_wind_dancer.sql` via `npm run db:generate` (no hand-written SQL needed). Added pure `src/player/`: `playerId.ts` (UUID validate/generate), `decisionPayload.ts` (structural parse/validation of an untrusted request body — unknown ranks/suits/actions rejected), `recordDecision.ts` (re-grades with `availableActions`/`optimalAction`/`classifyScenario` against `DEFAULT_RULES`, rejects a `userAction` not in the computed available set, inserts via an injected `DecisionRepository`, propagates repo failures). TDD: RED confirmed (3 new test files failed on missing modules), then GREEN (32/32 new tests passing; one test's expectation was corrected — a 2-card hand always allows `double` under `DEFAULT_RULES`, not just `hit`/`stand`). Checks: `npm test` 30 files/368 tests passed; `npx tsc --noEmit` clean; `npm run lint` clean (fixed one no-unused-vars warning by rewriting a test fixture instead of destructure-omit); `npm run build` clean (Next 16.3.6, Turbopack). Smoke test skipped — see below.
+
+## Assumptions made (T1)
+- `DecisionRow.playerCards`/`dealerUpcard`/`availableActions` are kept as structured data (`Card[]`/`Action[]`), not JSON strings, in the domain layer; the "store cards as JSON text" constraint is a D1-repository-layer concern for T2 (`JSON.stringify` right before `insert`), keeping `src/player/` free of DB-encoding details and easy to unit test.
+- `recordDecision` takes an already-shape-validated `RecordDecisionInput` (built from `DecisionPayload` + `playerId`); the T2 route is expected to call `parseDecisionPayload` first (400 on structural failure) and only then `recordDecision` (400 on `{ ok: false }`, i.e. legal-but-unavailable action), which `recordDecision` itself does not distinguish by HTTP status — that mapping belongs to the route.
+- `recordDecision` lets a repository failure reject/throw rather than swallowing it into a result variant, matching the codebase's existing `throw new Error(...)` convention for exceptional cases (`scenario.ts`, `resolve.ts`); T2's route is expected to `try/catch` around the call for the `500` response.
+- Player-id UUID validation accepts any RFC-4122-shaped UUID (8-4-4-4-12 hex, case-insensitive), not just v4, since the constraint is "reject not-a-UUID", not "reject anything but our own generator's output".
+
+## Smoke test
+Skipped: T1 has no API route or client wiring yet (that's T2/T3), so there is nothing to exercise via `db:migrate:local` + a live request. Will attempt the full local D1 smoke test after T2.
 
 ## Next step
-T1 on `feat/2b-t1-persistence-domain`.
+T2 on `feat/2b-t2-decisions-api` (branch from this commit).
