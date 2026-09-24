@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchCoachEvidence, streamCoachReply, type CoachHand } from "./coachRequest";
+import { fetchCoachEvidence, fetchCoachUsage, streamCoachReply, type CoachHand } from "./coachRequest";
 
 const hand: CoachHand = {
   playerCards: [{ rank: "10", suit: "spades" }, { rank: "6", suit: "hearts" }],
@@ -33,7 +33,7 @@ describe("coach requests", () => {
     expect(await fetchCoachEvidence(hand, new AbortController().signal)).toBeNull();
   });
 
-  it("accumulates streamed text and reports completion", async () => {
+  it("accumulates streamed text and reports the remaining quota from the header", async () => {
     const encoder = new TextEncoder();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(new ReadableStream({
       start(controller) {
@@ -41,15 +41,91 @@ describe("coach requests", () => {
         controller.enqueue(encoder.encode("has ten."));
         controller.close();
       },
-    }))));
+    }), { status: 200, headers: { "X-Coach-Remaining": "17" } })));
     const updates: string[] = [];
     const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, (text) => updates.push(text));
-    expect(result).toBe(true);
+    expect(result).toEqual({ kind: "ok", remaining: 17 });
     expect(updates.at(-1)).toBe("The dealer has ten.");
   });
 
-  it("lets the UI use its template when the provider is unavailable", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("unavailable", { status: 503 })));
-    expect(await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn())).toBe(false);
+  it("treats a malformed or missing remaining header as unknown", async () => {
+    const encoder = new TextEncoder();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode("hi"));
+        controller.close();
+      },
+    }), { status: 200, headers: { "X-Coach-Remaining": "not-a-number" } })));
+    const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
+    expect(result).toEqual({ kind: "ok", remaining: null });
+  });
+
+  it("treats an empty stream on a 200 as unavailable, not ok", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(new ReadableStream({
+      start(controller) {
+        controller.close();
+      },
+    }), { status: 200, headers: { "X-Coach-Remaining": "12" } })));
+    const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
+    expect(result).toEqual({ kind: "unavailable", remaining: 12 });
+  });
+
+  it("reports a distinct limit outcome for a 429 with remaining 0", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: "daily coach limit reached", remaining: 0,
+    }), { status: 429 })));
+    const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
+    expect(result).toEqual({ kind: "limit", remaining: 0 });
+  });
+
+  it("lets the UI use its template when the provider is unavailable, keeping a refunded remaining count", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: "coach unavailable", remaining: 9,
+    }), { status: 503 })));
+    const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
+    expect(result).toEqual({ kind: "unavailable", remaining: 9 });
+  });
+
+  it("reports unavailable with a null remaining when a pre-reservation 503 omits it", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: "coach unavailable",
+    }), { status: 503 })));
+    const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
+    expect(result).toEqual({ kind: "unavailable", remaining: null });
+  });
+
+  it("reports unavailable with a null remaining on a network error or abort", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
+    expect(result).toEqual({ kind: "unavailable", remaining: null });
+  });
+});
+
+describe("fetchCoachUsage", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("returns the parsed usage on success", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      limit: 20, used: 8, remaining: 12,
+    }), { status: 200 })));
+    const result = await fetchCoachUsage(new AbortController().signal);
+    expect(result).toEqual({ limit: 20, used: 8, remaining: 12 });
+  });
+
+  it("returns null on a non-2xx response", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: "coach usage unavailable" }), { status: 503 })));
+    expect(await fetchCoachUsage(new AbortController().signal)).toBeNull();
+  });
+
+  it("returns null on a malformed body", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      limit: 20, used: "eight", remaining: 12,
+    }), { status: 200 })));
+    expect(await fetchCoachUsage(new AbortController().signal)).toBeNull();
+  });
+
+  it("returns null on a network error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    expect(await fetchCoachUsage(new AbortController().signal)).toBeNull();
   });
 });

@@ -41,11 +41,31 @@ export async function fetchCoachEvidence(hand: CoachHand, signal: AbortSignal): 
   }
 }
 
+export type CoachStreamOutcome =
+  | { kind: "ok"; remaining: number | null }
+  | { kind: "limit"; remaining: 0 }
+  | { kind: "unavailable"; remaining: number | null };
+
+/** Non-negative integer or `null`; rejects anything else (NaN, floats, negatives, wrong type). */
+function parseRemaining(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+async function readRemainingFromBody(response: Response): Promise<number | null> {
+  try {
+    const body: unknown = await response.json();
+    if (!body || typeof body !== "object") return null;
+    return parseRemaining((body as { remaining?: unknown }).remaining);
+  } catch {
+    return null;
+  }
+}
+
 export async function streamCoachReply(
   input: { mode: "why" | "chat"; hand?: CoachHand; message?: string },
   signal: AbortSignal,
   onText: (text: string) => void,
-): Promise<boolean> {
+): Promise<CoachStreamOutcome> {
   try {
     const response = await fetch(coachUrl("stream"), {
       method: "POST",
@@ -54,7 +74,23 @@ export async function streamCoachReply(
       body: JSON.stringify({ mode: input.mode, ...input.hand, message: input.message }),
       signal,
     });
-    if (!response.ok || !response.body) return false;
+
+    if (response.status === 429) {
+      return { kind: "limit", remaining: 0 };
+    }
+    if (!response.ok || !response.body) {
+      return { kind: "unavailable", remaining: await readRemainingFromBody(response) };
+    }
+
+    const remaining = parseRemaining(
+      (() => {
+        const header = response.headers.get("X-Coach-Remaining");
+        if (header === null) return null;
+        const parsed = Number(header);
+        return Number.isInteger(parsed) ? parsed : null;
+      })(),
+    );
+
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let text = "";
@@ -66,8 +102,30 @@ export async function streamCoachReply(
     }
     text += decoder.decode();
     onText(text);
-    return text.trim().length > 0;
+
+    if (text.trim().length === 0) return { kind: "unavailable", remaining };
+    return { kind: "ok", remaining };
   } catch {
-    return false;
+    return { kind: "unavailable", remaining: null };
+  }
+}
+
+export async function fetchCoachUsage(
+  signal: AbortSignal,
+): Promise<{ limit: number; used: number; remaining: number } | null> {
+  try {
+    const response = await fetch(coachUrl("usage"), { credentials: "same-origin", signal });
+    if (!response.ok) return null;
+    const body: unknown = await response.json();
+    if (!body || typeof body !== "object") return null;
+    const value = body as Partial<{ limit: unknown; used: unknown; remaining: unknown }>;
+    if (
+      typeof value.limit !== "number" || !Number.isInteger(value.limit) || value.limit < 0 ||
+      typeof value.used !== "number" || !Number.isInteger(value.used) || value.used < 0 ||
+      typeof value.remaining !== "number" || !Number.isInteger(value.remaining) || value.remaining < 0
+    ) return null;
+    return { limit: value.limit, used: value.used, remaining: value.remaining };
+  } catch {
+    return null;
   }
 }
