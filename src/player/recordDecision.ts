@@ -44,23 +44,38 @@ export type RecordDecisionResult =
 /**
  * Re-grades `input` with the engine and, when the user's action was
  * actually available on that hand, inserts the resulting row via `repo`.
- * A repository failure propagates (rejects) instead of being swallowed —
- * the caller (the API route) decides how to respond.
+ *
+ * An engine call throwing on unexpected input (a domain error — e.g. a
+ * shape `parseDecisionPayload` didn't catch) is caught and returned as
+ * `{ ok: false }`, same as a legal-but-unavailable action, so the route
+ * can map it to a `400` instead of it bubbling up as a `500`. A
+ * repository failure is NOT caught here: it still propagates (rejects)
+ * so the caller (the API route) maps it to `500`.
  */
 export async function recordDecision(
   input: RecordDecisionInput,
   repo: DecisionRepository,
 ): Promise<RecordDecisionResult> {
-  const actions = availableActions(input.playerCards, DEFAULT_RULES);
-  if (!actions.includes(input.userAction)) {
+  let actions: Action[];
+  let optimal: Action;
+  let category: ScenarioCategory;
+  try {
+    actions = availableActions(input.playerCards, DEFAULT_RULES);
+    if (!actions.includes(input.userAction)) {
+      return {
+        ok: false,
+        reason: `"${input.userAction}" is not available for this hand`,
+      };
+    }
+
+    optimal = optimalAction(input.playerCards, input.dealerUpcard, DEFAULT_RULES);
+    ({ category } = classifyScenario(input.playerCards));
+  } catch (error) {
     return {
       ok: false,
-      reason: `"${input.userAction}" is not available for this hand`,
+      reason: error instanceof Error ? error.message : "invalid decision input",
     };
   }
-
-  const optimal = optimalAction(input.playerCards, input.dealerUpcard, DEFAULT_RULES);
-  const { category } = classifyScenario(input.playerCards);
 
   const row: DecisionRow = {
     id: crypto.randomUUID(),
