@@ -26,7 +26,7 @@ Phase 2b stores every decision, but the player never sees long-term progress. Th
 `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`; UI task adds mobile + desktop screenshots.
 
 ## Tasks
-- [ ] T1 — Stats: pure `computePlayerStats(decisions)` (totals, accuracy, current and best streak, per-category totals/accuracy, strongest/weakest with a minimum sample), D1 query of a player's decisions, `GET /api/stats` via a pure tested handler.
+- [x] T1 — Stats: pure `computePlayerStats(decisions)` (totals, accuracy, current and best streak, per-category totals/accuracy, strongest/weakest with a minimum sample), D1 query of a player's decisions, `GET /api/stats` via a pure tested handler.
 - [ ] T2 — Achievements: pure `deriveAchievements(decisions)` with a small fixed badge catalog (e.g. first perfect decision, 10 correct in a row, 10 soft hands in a row correct, never stood on 12 vs 2 across N such hands, every category attempted, 100 decisions); included in the `/api/stats` response.
 - [ ] T3 — Adaptive weighting: pure `weightsFromStats(stats)` (`weight = base + weaknessFactor`, bounded) feeding the existing scenario generator; `usePracticeSession` accepts weights and a "practice weakness" focus without breaking seeded determinism.
 - [ ] T4 — UI: HUD "Skill Map" button → pixel-art panel overlay (per-category bars, accuracy, streaks, badges, "Practice weakness" toggle), fetched from `/api/stats` and refreshed after decisions, falling back to session stats offline; short summary on the game-over overlay. Mobile/desktop screenshots.
@@ -49,6 +49,7 @@ Phase 2b stores every decision, but the player never sees long-term progress. Th
 
 ## Progress
 - 2026-09-23: Document created. Owner approved Phase 3 and chose the HUD panel for the Skill Map.
+- 2026-09-23: T1 done on `feat/3-t1-stats` (commit c010c43). Strict TDD observed for all three new units (RED confirmed by temporarily removing the just-written implementation and re-running vitest before restoring it, then GREEN): `src/player/playerStats.ts` (`computePlayerStats`, 10 tests), `src/db/decisionsRepository.ts` additions (`decisionRowFromSelectValues` + `listPlayerDecisions`, 4 new tests), `src/app/api/stats/{handler,route}.ts` (`handleStatsRequest`, 6 tests). Checks: `npm test` 426/426 passed, `npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` clean (`/api/stats` registered as a dynamic route). Local smoke test run: `npm run db:migrate:local` (no-op, already applied), `npm run cf:build` + `npx opennextjs-cloudflare preview -- --port 8799` (isolated from the pre-existing dev server on :3000, PID 51367, never touched), `GET /api/stats` with no cookie → 200 empty stats, `POST /api/decisions` x3 → cookie minted, `GET /api/stats` with that cookie → correct totals/per-category stats; preview processes killed afterward, `git status` clean of build artifacts. Assumptions: `MIN_ATTEMPTS_FOR_RANKING = 5` per the task's suggested constant, documented in `playerStats.ts`; a perfect (zero-miss) category is never reported as weakest (mirrors `sessionStats.ts`'s existing convention); strongest/weakest ties break on fixed category order (hard, soft, pair); GET /api/stats response body is `{ stats: PlayerStats }` (T2 will add a sibling `achievements` key, not nest under `stats`).
 
 ## Next step
-T1 on `feat/3-t1-stats`.
+T2 (`feat/3-t2-achievements`).
