@@ -11,6 +11,7 @@ import { sendDecision } from "@/features/practice/sendDecision";
 import type { DecisionRecord } from "@/features/practice/types";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
 import { CoachPanel } from "./CoachPanel";
+import { DailyChallengePanel } from "./DailyChallengePanel";
 import type { CoachHand } from "./coachRequest";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { handTotalLabel } from "./handTotalLabel";
@@ -150,6 +151,7 @@ export function PixelCasinoScreen() {
   const { muted, toggleMuted, play } = useSound();
   const [showClue, setShowClue] = useState(false);
   const [coachOpen, setCoachOpen] = useState(false);
+  const [dailyChallengeOpen, setDailyChallengeOpen] = useState(false);
   const [coachMode, setCoachMode] = useState<"why" | "chat">("chat");
   const [pendingAction, setPendingAction] = useState<Action | null>(null);
   const [handSequence, setHandSequence] = useState(0);
@@ -329,7 +331,7 @@ export function PixelCasinoScreen() {
       // The Skill Map panel owns Esc itself and must be the only thing
       // reacting to keys while it's open — the table's H/S/D/P/Enter
       // shortcuts must not fire underneath it (T4 requirement).
-      if (skillMapOpen || coachOpen) return;
+      if (skillMapOpen || coachOpen || dailyChallengeOpen) return;
       if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
       if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
       // Enter also activates a focused button (e.g. "Deal next hand"); let
@@ -350,7 +352,7 @@ export function PixelCasinoScreen() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [feedback, scenario, run.status, chooseAction, nextHand, restart, skillMapOpen, coachOpen]);
+  }, [feedback, scenario, run.status, chooseAction, nextHand, restart, skillMapOpen, coachOpen, dailyChallengeOpen]);
 
   const coachHand: CoachHand | null = useMemo(() => {
     if (!scenario || !feedback) return null;
@@ -393,6 +395,8 @@ export function PixelCasinoScreen() {
           reduceMotion={Boolean(reduceMotion)}
           onOpenSkillMap={() => setSkillMapOpen(true)}
           skillMapOpen={skillMapOpen}
+          onOpenDailyChallenge={() => setDailyChallengeOpen(true)}
+          dailyChallengeOpen={dailyChallengeOpen}
         />
       </header>
 
@@ -529,6 +533,7 @@ export function PixelCasinoScreen() {
         focusWeakness={focusWeakness}
         onToggleFocusWeakness={() => setFocusWeakness((value) => !value)}
       />
+      <DailyChallengePanel open={dailyChallengeOpen} onClose={() => setDailyChallengeOpen(false)} />
       {coachOpen && <CoachPanel
         open={coachOpen}
         mode={coachMode}
