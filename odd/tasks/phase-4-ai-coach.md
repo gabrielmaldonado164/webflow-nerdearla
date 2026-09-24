@@ -2,6 +2,8 @@
 
 The coach explains decisions and answers questions, but the blackjack engine remains the sole authority for strategy and expected value. The game always displays its deterministic template explanation first; AI is optional.
 
+Branch: `feat/4-ai-coach`, stacked on `feat/3-t4-skill-map-ui`. Work units: `2a0438e` (backend/API) and `71bff33` (game UI and documentation). Not pushed or deployed.
+
 ## Implemented
 
 - `POST /api/coach/evidence` re-validates the hand and returns the engine's best action and Monte Carlo EV for every legal move. It works without an AI key.
