@@ -164,8 +164,8 @@ Goal: make 21 Lab feel like a web game, not a pretty page. Strategy grading stay
 **Current state (2026-09-24):** Daily Challenge is implemented on `feat/5-daily-challenge` but not yet deployed. It uses ten fixed hands per UTC day, ends after three misses, persists one engine-graded result per player/day, and includes loading/error/result states. Local Cloudflare D1 API smoke passed. The leaderboard is intentionally deferred at the roadmap cut line. Visual/mobile QA and final production smoke remain open. See `odd/tasks/phase-5-daily-challenge.md`.
 - [ ] Deterministic daily scenario set (date-seeded), results, and a simple leaderboard
 - [ ] Visual polish pass: selected 2.5D pixel-art casino language across game and surrounding UI
-- [ ] Mobile QA, loading and error states, empty states
-- [ ] Final production deploy + smoke test on the public URL
+- [x] Mobile QA, loading and error states, empty states
+- [x] Final production deploy + smoke test on the public URL
 
 ### Phase 6 — Submit (Fri 25, before 15:00 ART; buffer until 18:00)
 - [ ] Submit the form: GitHub user, app URL, description
@@ -215,3 +215,4 @@ Append one line per session: date, what was done, and what comes next.
 - 2026-09-24: Started Phase 5 on `feat/5-daily-challenge`. Built a date-seeded ten-hand challenge, canonical D1 sets, engine-graded per-player results, a HUD-opened pixel panel, and client loading/error handling. The leaderboard remains deferred, and no production deploy has been attempted. Next: mobile/visual QA, runtime D1 smoke, polish, and owner-approved final deploy.
 - 2026-09-24: Browser QA of the Daily Challenge (mobile 390px + desktop) on the local Cloudflare preview: play, save, reload, Esc/focus, and offline state verified. Fixed saved-result misses after reload (`ce6a4b2`, 519 tests). Next: coach quota visibility (owner decision), then owner-approved production deploy + smoke.
 - 2026-09-24: Coach quota visibility shipped on `feat/5-daily-challenge` (owner decision): provider failures refund the question, `GET /api/coach/usage`, a visible `N/20 AI questions left today` counter, and a distinct daily-limit note. Native review approved; advisory findings fixed. 560 tests. Next: owner-approved production deploy + public smoke.
+- 2026-09-24: Owner approved production deploy. Deployed `feat/5-daily-challenge` commit `d7e8a78` to Webflow Cloud main (`af5b4a96-4738-4c5e-a96a-89a655ff7832`, success); restored `open-next.config.ts` after the CLI removed it. Public smoke: `/` 200; `/api/coach/usage` 200 `20/20` with no player cookie minted; `/api/daily` 200 with ten hands (migration 0003 live); a nine-hand run saved and read back engine-graded (6/9, 67%); malformed coach body 400; browser shows the coach counter and the Daily Challenge panel with no horizontal scroll. No paid provider calls. Next: Phase 6 (README, submission) and the pending review of `d7e8a78` in the next slice; push + PR remain owner-controlled.
