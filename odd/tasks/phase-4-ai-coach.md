@@ -20,7 +20,7 @@ Set these **server-only** Webflow Cloud environment variables before the AI coac
 | `COMMAND_CODE_API_KEY` | Secret Command Code Provider API key. Never use `NEXT_PUBLIC_`. |
 | `COMMAND_CODE_MODEL` | A model ID that supports `/chat/completions` and function tools. Verify against the provider's model list. |
 
-Without either variable, `/api/coach/stream` returns 503; the game and EV evidence remain usable. `COMMAND_CODE_MODEL` is set in Webflow Cloud to `deepseek/deepseek-v4-flash` (verified against the provider's current public model catalog). `COMMAND_CODE_API_KEY` is not set in Webflow Cloud or this checkout, so a real provider call has **not** been verified.
+Without either variable, `/api/coach/stream` returns 503; the game and EV evidence remain usable. `COMMAND_CODE_MODEL` is set in Webflow Cloud to `deepseek/deepseek-v4-flash` (verified against the provider's current public model catalog). Webflow Cloud now lists `COMMAND_CODE_API_KEY` with `isSecret: true`; its value is masked and has **not** been verified by a real provider call. The production deploy was not run pending explicit owner approval.
 
 ## Verification and remaining work
 
@@ -28,7 +28,7 @@ Without either variable, `/api/coach/stream` returns 503; the game and EV eviden
 - `npm test`: 505/505 passed. `npx tsc --noEmit`, `npm run lint`, `npm run build`, and `npm run cf:build`: passed.
 - Local Cloudflare preview: valid 16 vs 10 evidence returned 200 with engine action `hit` and EV for all three available actions; stream returned 503 without the provider configuration. The preview was stopped afterward.
 - Browser UI smoke could not run: no browser connection was available in this session.
-- Before production delivery, configure both variables, verify a real streamed Why/chat request and the 429 quota response, then smoke-test desktop/mobile. Do not mark Phase 4 operational until then.
+- After explicit owner approval for the production deploy, verify a real streamed Why/chat request and the 429 quota response, then smoke-test desktop/mobile. Do not mark Phase 4 operational until then.
 
 ## Rollback boundary
 
