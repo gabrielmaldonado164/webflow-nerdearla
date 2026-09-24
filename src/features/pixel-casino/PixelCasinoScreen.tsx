@@ -351,6 +351,15 @@ export function PixelCasinoScreen() {
                 <div className={styles.felt}>
                   <div className={styles.feltGrain} aria-hidden="true" />
                   <div className={styles.feltArc} aria-hidden="true" />
+                  <div className={styles.dealerCharacter}>
+                    <Image
+                      src="/characters/dealer.png"
+                      alt="Pixel-art blackjack dealer in an emerald vest and visor"
+                      width={1224}
+                      height={1285}
+                      unoptimized
+                    />
+                  </div>
                   <div className={styles.dealerHand}>
                     <div className={styles.handName}>DEALER <b>{dealerVisibleCards && holeRevealed ? handTotalLabel(dealerVisibleCards) : scenario ? rankValue(scenario.dealerUpcard.rank) : "·"}</b></div>
                     <div className={styles.cardFan} key={`dealer-${handSequence}`}>
