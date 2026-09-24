@@ -53,6 +53,15 @@ const GENERIC_SERVER_ERROR = "failed to record decision";
  * but game-illegal action (rejected by `recordDecision`) still
  * establishes player identity, since determining legality needs the
  * same engine step that would also produce the `decisions` row.
+ *
+ * Once `ensurePlayer` has succeeded for `playerId`, every later result —
+ * the 400 from `recordDecision`, the 201, or a 500 from a downstream
+ * failure such as `insertDecision` throwing — carries `setCookie` for
+ * that same id. Skipping it on a post-`ensurePlayer` 500 would orphan
+ * the just-created (or just-reused) `players` row: the client would
+ * never learn its id and mint a new one next time. Only a failure
+ * *inside* `ensurePlayer` itself (nothing persisted yet) returns 500
+ * with no cookie.
  */
 export async function handleDecisionRequest(
   rawBody: string,
@@ -73,10 +82,17 @@ export async function handleDecisionRequest(
   const cookieValue = deps.readCookie();
   const playerId = isValidPlayerId(cookieValue) ? cookieValue : deps.newId();
 
+  let setCookie: PlayerCookieOptions;
   try {
     await deps.repo.ensurePlayer(playerId);
-    const setCookie = playerCookieOptions(playerId, deps.secure);
+    setCookie = playerCookieOptions(playerId, deps.secure);
+  } catch (error) {
+    // Nothing was persisted for playerId: no cookie to hand back.
+    console.error("Failed to record decision:", error);
+    return { status: 500, body: { error: GENERIC_SERVER_ERROR } };
+  }
 
+  try {
     const result = await recordDecision(
       { ...parsed.value, playerId },
       { insertDecision: (row) => deps.repo.insertDecision(row) },
@@ -88,7 +104,9 @@ export async function handleDecisionRequest(
 
     return { status: 201, body: { id: result.row.id }, setCookie };
   } catch (error) {
+    // ensurePlayer already succeeded for playerId: the cookie must still be
+    // handed back, or this player's row is orphaned (a fresh id next time).
     console.error("Failed to record decision:", error);
-    return { status: 500, body: { error: GENERIC_SERVER_ERROR } };
+    return { status: 500, body: { error: GENERIC_SERVER_ERROR }, setCookie };
   }
 }

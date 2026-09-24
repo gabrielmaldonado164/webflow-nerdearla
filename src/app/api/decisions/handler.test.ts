@@ -158,7 +158,7 @@ describe("handleDecisionRequest", () => {
     expect(result.setCookie).toMatchObject({ value: MINTED_ID });
   });
 
-  it("returns 500 with a generic message and no stack when ensurePlayer throws", async () => {
+  it("returns 500 with a generic message, no stack, and no cookie when ensurePlayer throws (nothing was persisted)", async () => {
     const repo: DecisionHandlerRepo = {
       ensurePlayer: vi.fn().mockRejectedValue(new Error("D1 unavailable: secret-dsn")),
       insertDecision: vi.fn(),
@@ -170,9 +170,10 @@ describe("handleDecisionRequest", () => {
     expect(result.status).toBe(500);
     expect(result.body.error).not.toContain("secret-dsn");
     expect(result.body).not.toHaveProperty("stack");
+    expect(result.setCookie).toBeUndefined();
   });
 
-  it("returns 500 with a generic message and no stack when insertDecision throws", async () => {
+  it("returns 500 with a generic message, no stack, and the minted id's cookie when insertDecision throws after ensurePlayer already succeeded", async () => {
     const repo: DecisionHandlerRepo = {
       ensurePlayer: vi.fn().mockResolvedValue(undefined),
       insertDecision: vi.fn().mockRejectedValue(new Error("D1 unavailable: secret-dsn")),
@@ -184,6 +185,9 @@ describe("handleDecisionRequest", () => {
     expect(result.status).toBe(500);
     expect(result.body.error).not.toContain("secret-dsn");
     expect(result.body).not.toHaveProperty("stack");
+    // The player row was already ensured for MINTED_ID: the client must get
+    // the same cookie back, or that player becomes orphaned (new id next time).
+    expect(result.setCookie).toMatchObject({ value: MINTED_ID });
   });
 
   it("marks the cookie secure when deps.secure is true", async () => {
