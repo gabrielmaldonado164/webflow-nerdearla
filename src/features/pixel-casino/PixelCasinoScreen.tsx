@@ -28,7 +28,7 @@ import { computeRunAccuracy, isNewBestScore } from "./runSummary";
 import { SkillMapPanel } from "./SkillMapPanel";
 import { computeToggleWeights } from "./skillMapWeights";
 import { summarizeForGameOver } from "./skillMapSummary";
-import { buildSkillMapViewModel } from "./skillMapViewModel";
+import { buildSkillMapViewModel, CATEGORY_LABEL, SKILL_MAP_CATEGORY_ORDER } from "./skillMapViewModel";
 import { useSkillMapData } from "./useSkillMapData";
 import { useSound } from "./useSound";
 import styles from "./PixelCasinoScreen.module.css";
@@ -51,12 +51,6 @@ const CLUES: Record<ScenarioCategory, string> = {
   hard: "No Ace counts as 11. Compare your total with the dealer's visible card.",
   soft: "An Ace counts as 11. You can draw once without busting.",
   pair: "A pair can stay together or split. The dealer's card changes the choice.",
-};
-
-const CATEGORY_LABEL: Record<ScenarioCategory, string> = {
-  hard: "Hard hands",
-  soft: "Soft hands",
-  pair: "Pairs",
 };
 
 interface GameCardProps {
@@ -482,7 +476,7 @@ export function PixelCasinoScreen() {
           <div className={styles.panelTitle}><Target weight="fill" aria-hidden="true" /><div><small>PLAYER CARD</small><strong>Learn every hand.</strong></div></div>
           <div className={styles.scoreLine}><div><small>ACCURACY</small><strong>{stats.accuracy === null ? "--" : `${stats.accuracy}%`}</strong></div><div><small>CORRECT</small><strong>{stats.correctCount}/{stats.handsPlayed}</strong></div></div>
           <div className={styles.skillHeading}><span>SKILL MAP</span><small>SESSION</small></div>
-          {(["hard", "soft", "pair"] as ScenarioCategory[]).map((category) => {
+          {SKILL_MAP_CATEGORY_ORDER.map((category) => {
             const skill = stats.categoryStats[category];
             return <div className={styles.skillRow} key={category}><span>{CATEGORY_LABEL[category]}</span><div className={styles.skillTrack}><i style={{ width: `${skill.accuracy ?? 0}%` }} /></div><b>{skill.accuracy === null ? "--" : `${skill.accuracy}%`}</b></div>;
           })}

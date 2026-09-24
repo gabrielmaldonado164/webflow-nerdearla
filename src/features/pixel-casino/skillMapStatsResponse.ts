@@ -12,12 +12,12 @@ import type { ScenarioCategory } from "@/blackjack";
 import type { Achievement } from "@/player/achievements";
 import type { PlayerCategoryStats, PlayerStats } from "@/player/playerStats";
 
+import { SKILL_MAP_CATEGORY_ORDER } from "./skillMapViewModel";
+
 export interface StatsResponseBody {
   stats: PlayerStats;
   achievements: Achievement[];
 }
-
-const CATEGORIES: readonly ScenarioCategory[] = ["hard", "soft", "pair"];
 
 function isScenarioCategory(value: unknown): value is ScenarioCategory {
   return value === "hard" || value === "soft" || value === "pair";
@@ -53,7 +53,7 @@ function isPlayerStats(value: unknown): value is PlayerStats {
   const categoryStats = stats.categoryStats;
   if (!categoryStats || typeof categoryStats !== "object") return false;
   const record = categoryStats as Record<string, unknown>;
-  return CATEGORIES.every((category) => isCategoryStatsEntry(record[category]));
+  return SKILL_MAP_CATEGORY_ORDER.every((category) => isCategoryStatsEntry(record[category]));
 }
 
 function isAchievement(value: unknown): value is Achievement {

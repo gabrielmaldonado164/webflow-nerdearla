@@ -20,17 +20,10 @@ import { CheckCircle, ChartBar, CloudSlash, Lock, X } from "@phosphor-icons/reac
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef } from "react";
 
-import type { ScenarioCategory } from "@/blackjack";
 import type { Achievement } from "@/player/achievements";
 
-import type { SkillMapViewModel } from "./skillMapViewModel";
+import { CATEGORY_LABEL, type SkillMapViewModel } from "./skillMapViewModel";
 import styles from "./SkillMapPanel.module.css";
-
-const CATEGORY_LABEL: Record<ScenarioCategory, string> = {
-  hard: "Hard hands",
-  soft: "Soft hands",
-  pair: "Pairs",
-};
 
 export interface SkillMapPanelProps {
   open: boolean;
@@ -141,17 +134,14 @@ export function SkillMapPanel({ open, onClose, viewModel, focusWeakness, onToggl
 
             <section aria-label="Per-category performance">
               <h3 className={styles.sectionHeading}>Categories</h3>
-              {(["hard", "soft", "pair"] as ScenarioCategory[]).map((category) => {
-                const row = viewModel.categories.find((c) => c.category === category);
-                return (
-                  <div className={styles.categoryRow} key={category}>
-                    <span>{CATEGORY_LABEL[category]}</span>
-                    <AccuracyBar accuracy={row?.accuracy ?? null} />
-                    <b>{row?.accuracy === null || row?.accuracy === undefined ? "--" : `${row.accuracy}%`}</b>
-                    <small>{row?.attempts ?? 0} attempts</small>
-                  </div>
-                );
-              })}
+              {viewModel.categories.map((row) => (
+                <div className={styles.categoryRow} key={row.category}>
+                  <span>{CATEGORY_LABEL[row.category]}</span>
+                  <AccuracyBar accuracy={row.accuracy} />
+                  <b>{row.accuracy === null ? "--" : `${row.accuracy}%`}</b>
+                  <small>{row.attempts} attempts</small>
+                </div>
+              ))}
             </section>
 
             {(viewModel.strongestCategory || viewModel.weakestCategory) && (

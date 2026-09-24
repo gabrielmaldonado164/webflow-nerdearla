@@ -9,15 +9,7 @@
  * encouragement when there's simply not enough data yet.
  */
 
-import type { ScenarioCategory } from "@/blackjack";
-
-import type { SkillMapViewModel } from "./skillMapViewModel";
-
-const CATEGORY_LABEL: Record<ScenarioCategory, string> = {
-  hard: "Hard hands",
-  soft: "Soft hands",
-  pair: "Pairs",
-};
+import { CATEGORY_LABEL, type SkillMapViewModel } from "./skillMapViewModel";
 
 export function summarizeForGameOver(vm: SkillMapViewModel): string {
   if (vm.weakestCategory) {

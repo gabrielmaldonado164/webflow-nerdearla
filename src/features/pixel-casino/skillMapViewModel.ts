@@ -22,6 +22,18 @@ import type { StatsResponseBody } from "./skillMapStatsResponse";
 
 const CATEGORY_ORDER: readonly ScenarioCategory[] = ["hard", "soft", "pair"];
 
+/**
+ * Single source of truth for the display label of each scenario
+ * category (T5 review follow-up on T4: previously duplicated in
+ * `PixelCasinoScreen.tsx`, `SkillMapPanel.tsx`, and
+ * `skillMapSummary.ts`).
+ */
+export const CATEGORY_LABEL: Record<ScenarioCategory, string> = {
+  hard: "Hard hands",
+  soft: "Soft hands",
+  pair: "Pairs",
+};
+
 export interface SkillMapCategoryRow {
   category: ScenarioCategory;
   attempts: number;
