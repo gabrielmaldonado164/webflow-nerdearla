@@ -38,7 +38,7 @@ Progress is browser-session-only. Phase 3 (stats, skill map) and Phase 4 (AI coa
 ## Delivery
 - Strategy: `ask-on-risk`; reusing the owner's standing chain choice **feature-branch-chain** (from Phase 2c). One branch per task stacked on `feat/2c-t5-game-ui`: `feat/2b-t1-persistence-domain` → `feat/2b-t2-decisions-api` → `feat/2b-t3-client-wiring`.
 - Forecast: ~500–700 authored changed lines across T1–T3.
-- Last reviewed boundary: 1d402e7 (Phase 2c T5-fix lineage review-9d053cdf12623359).
+- Last reviewed boundary: 2bc1c42 (Phase 2b T1–T3 lineage review-895a950917c8d853 approved + acknowledged; before: 1d402e7, Phase 2c T5-fix lineage review-9d053cdf12623359).
 
 ## Route per task
 | Task | Route | Trigger evidence |
@@ -88,6 +88,8 @@ T2's smoke test (above) already exercised `POST /api/decisions` directly via `cu
 4. `wrangler d1 execute DB --local` confirmed exactly one `players` row and one `decisions` row (`category="pair"`, `user_action="split"`, `optimal_action="split"`, `is_correct=1`) matching the click — the browser's cookie/fetch wiring reaches the same server pipeline verified in T2.
 5. The preview server's `workerd` process crashed shortly after (`The Workers runtime crashed unexpectedly and is being restarted`), *after* the successful `201` was logged and the D1 row committed; this looks like a `wrangler dev`/OpenNext preview-tooling artifact (likely session teardown) rather than an app bug — no `npm test`/`tsc`/`lint`/`build` check is affected.
 6. Cleaned up: killed the preview server; `.wrangler/`, `.open-next/`, and `.playwright-mcp/` all stay gitignored.
+
+- 2026-09-23: T1–T3 review approved and acknowledged (lineage review-895a950917c8d853, 1d402e7..2bc1c42, reliability lens). Non-blocking follow-ups: (WARNING) `decisionRequest.test.ts` restores an unset `NEXT_PUBLIC_BASE_PATH` as the string "undefined" (use `vi.stubEnv`/delete); (WARNING) POST route and D1 adapter have no automated tests (extract a pure handler with injected repo/cookies); (WARNING) payload parser has no max hand size or bust/21 guard, so a crafted hand could reach the engine and return 500 instead of 400; (SUGGESTION) `sendDecision` swallow test has no assertions. Process note: a writer-spawned verification fork committed abb167e without authorization; content verified and consolidated in 2bc1c42.
 
 ## Next step
 Phase 3 — Stats & Skill Map (`docs/ROADMAP.md` Phase 3 checklist).
