@@ -58,14 +58,47 @@ describe("buildDecisionRequest", () => {
     expect(parsed).not.toHaveProperty("decidedAt");
   });
 
-  it("restores an originally-unset NEXT_PUBLIC_BASE_PATH as truly undefined, not the string \"undefined\"", () => {
+  it("restores NEXT_PUBLIC_BASE_PATH to its exact original value after stubbing, regardless of test order", () => {
     // Regression guard for a real bug: naively restoring with
     // `process.env.X = originalValue` coerces `undefined` to the
     // string "undefined" (env vars are always strings), which then
-    // leaks into every later test/module that reads this var. This
-    // test runs after other tests in this file have already mutated
-    // and "restored" NEXT_PUBLIC_BASE_PATH via afterEach, so it
-    // exercises the actual cleanup path, not just a fresh state.
-    expect(process.env.NEXT_PUBLIC_BASE_PATH).toBeUndefined();
+    // leaks into every later test/module that reads this var.
+    // Self-contained: captures and restores the *actual* ambient value
+    // itself, rather than assuming it's unset or relying on another
+    // test's afterEach having already run first.
+    const original = process.env.NEXT_PUBLIC_BASE_PATH;
+    try {
+      vi.stubEnv("NEXT_PUBLIC_BASE_PATH", "/mount");
+      vi.unstubAllEnvs();
+      expect(process.env.NEXT_PUBLIC_BASE_PATH).toBe(original);
+      expect(process.env.NEXT_PUBLIC_BASE_PATH).not.toBe("undefined");
+    } finally {
+      if (original === undefined) {
+        delete process.env.NEXT_PUBLIC_BASE_PATH;
+      } else {
+        process.env.NEXT_PUBLIC_BASE_PATH = original;
+      }
+    }
+  });
+
+  it("restores an originally-unset NEXT_PUBLIC_BASE_PATH as truly undefined, not the string \"undefined\"", () => {
+    // Explicitly covers the originally-unset case: deletes the key
+    // itself first (rather than assuming the ambient environment
+    // happens not to have it set) and restores whatever was actually
+    // there afterward, so this test's outcome cannot depend on
+    // execution order relative to the other tests in this file.
+    const original = process.env.NEXT_PUBLIC_BASE_PATH;
+    delete process.env.NEXT_PUBLIC_BASE_PATH;
+    try {
+      vi.stubEnv("NEXT_PUBLIC_BASE_PATH", "/mount");
+      vi.unstubAllEnvs();
+      expect(process.env.NEXT_PUBLIC_BASE_PATH).toBeUndefined();
+    } finally {
+      if (original === undefined) {
+        delete process.env.NEXT_PUBLIC_BASE_PATH;
+      } else {
+        process.env.NEXT_PUBLIC_BASE_PATH = original;
+      }
+    }
   });
 });
