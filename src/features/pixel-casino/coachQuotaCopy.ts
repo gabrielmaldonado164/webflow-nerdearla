@@ -19,7 +19,7 @@ export interface CoachQuotaState {
 export interface CoachQuotaCopy {
   /** e.g. "12/20 AI questions left today"; `null` until both limit and remaining are known. */
   counter: string | null;
-  /** Distinct note shown only right after a `limit` outcome. */
+  /** Distinct note shown after a `limit` outcome or whenever no questions remain. */
   limitMessage: string | null;
   /** Reassurance shown only after an `unavailable` outcome the server confirmed it refunded. */
   refundMessage: string | null;
@@ -33,7 +33,7 @@ export function coachQuotaCopy({ limit, remaining, outcomeKind, refunded }: Coac
 
   return {
     counter,
-    limitMessage: outcomeKind === "limit" ? LIMIT_MESSAGE : null,
+    limitMessage: outcomeKind === "limit" || remaining === 0 ? LIMIT_MESSAGE : null,
     refundMessage: outcomeKind === "unavailable" && refunded ? REFUND_MESSAGE : null,
   };
 }

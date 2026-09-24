@@ -79,3 +79,11 @@ describe("shouldApplyUsageFetch", () => {
     expect(shouldApplyUsageFetch({ limit: 20, remaining: 18, outcomeKind: "unavailable", refunded: true })).toBe(false);
   });
 });
+
+describe("coachQuotaCopy when the day's quota is already used up", () => {
+  it("shows the limit note on open, before any question is asked", () => {
+    const copy = coachQuotaCopy({ limit: 20, remaining: 0, outcomeKind: null, refunded: false });
+    expect(copy.counter).toBe("0/20 AI questions left today");
+    expect(copy.limitMessage).toMatch(/Daily AI limit reached/);
+  });
+});

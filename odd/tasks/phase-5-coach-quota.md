@@ -22,7 +22,7 @@ Players can see how many AI coach questions remain today, can tell a reached lim
 - [x] T1 Server: `releaseCoachCall` + `getCoachUsage` (test-first), refund on provider failure, `X-Coach-Remaining` header on success, `remaining` in 429/503 bodies, `GET /api/coach/usage`.
 - [x] T2 Client: typed `streamCoachReply` outcome (`ok` / `limit` / `unavailable` with remaining), usage fetch, counter and limit message in `CoachPanel`.
 - [x] T2b Review follow-ups (review-e2b2b3091aaef17b approved + acknowledged, advisory findings accepted as in-scope fixes): refund note only for server-confirmed refunds (not merged stale remaining, not empty 200); post-reserve usage read must not leak a slot; usage fetch must not overwrite a newer stream outcome; extract the stream route into a tested handler that proves refund on provider failure.
-- [ ] T3 Local Cloudflare preview smoke + browser check of the counter, then docs.
+- [x] T3 Local Cloudflare preview smoke + browser check of the counter, then docs.
 
 ## Constraints
 
@@ -52,3 +52,5 @@ Players can see how many AI coach questions remain today, can tell a reached lim
   RED confirmed for `handler.test.ts` (handler.ts moved aside — "Cannot find module") before restoring the implementation to GREEN; RED confirmed for the four affected `coachRequest.test.ts` assertions and the three new `coachQuotaCopy.test.ts`/`shouldApplyUsageFetch` assertions before implementing.
   Verification: `npx vitest run`: 559/559 passed (was 544; +15: 11 new `handler.test.ts` + 1 new `coachRequest.test.ts` (`refunded` on non-503) + 3 new `coachQuotaCopy.test.ts` (`shouldApplyUsageFetch`), net of edits to 4 existing assertions). `npx tsc --noEmit`: clean. `npm run lint`: clean.
   No new product-decision gaps.
+- T3 done (inline, 1 file). Local Cloudflare preview + Playwright at 390x844: `GET /api/coach/usage` 200 `{limit:20,used:0,remaining:20}`, no Set-Cookie; counter shows 20/20, 3/20 (local D1 count 17), and 0/20 plus the limit note on open (count 20). Added limit note whenever remaining is 0, test-first (RED 1 failing, GREEN 560). A pre-reservation 503 (no local key) shows the offline fallback without a refund claim. No horizontal scroll. Live 429/refund paths are covered by handler tests only; the provider is not configured locally.
+- Review: review-e2b2b3091aaef17b (T1+T2, medium) approved + acknowledged; its advisory findings were fixed in T2b (`21a1ef7`).
