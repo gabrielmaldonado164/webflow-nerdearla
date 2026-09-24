@@ -39,3 +39,21 @@ export const coachUsage = sqliteTable("coach_usage", {
   date: text("date").notNull(),
   count: integer("count").notNull(),
 }, (table) => [primaryKey({ columns: [table.playerId, table.date] })]);
+
+/** Immutable, engine-generated hands shared by every player on a UTC day. */
+export const dailyChallenges = sqliteTable("daily_challenges", {
+  date: text("date").primaryKey(),
+  seed: integer("seed").notNull(),
+  scenarios: text("scenarios").notNull(),
+});
+
+/** First completed attempt wins; the composite key makes retries idempotent. */
+export const dailyResults = sqliteTable("daily_results", {
+  playerId: text("player_id").notNull().references(() => players.id),
+  date: text("date").notNull().references(() => dailyChallenges.date),
+  score: integer("score").notNull(),
+  attempts: integer("attempts").notNull(),
+  accuracy: integer("accuracy").notNull(),
+  durationMs: integer("duration_ms").notNull(),
+  createdAt: text("created_at").notNull(),
+}, (table) => [primaryKey({ columns: [table.playerId, table.date] })]);
