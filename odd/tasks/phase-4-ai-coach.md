@@ -20,7 +20,7 @@ Set these **server-only** Webflow Cloud environment variables before the AI coac
 | `COMMAND_CODE_API_KEY` | Secret Command Code Provider API key. Never use `NEXT_PUBLIC_`. |
 | `COMMAND_CODE_MODEL` | A model ID that supports `/chat/completions` and function tools. Verify against the provider's model list. |
 
-Without either variable, `/api/coach/stream` returns 503; the game and EV evidence remain usable. No key is present in this checkout, so a real provider call has **not** been verified.
+Without either variable, `/api/coach/stream` returns 503; the game and EV evidence remain usable. `COMMAND_CODE_MODEL` is set in Webflow Cloud to `deepseek/deepseek-v4-flash` (verified against the provider's current public model catalog). `COMMAND_CODE_API_KEY` is not set in Webflow Cloud or this checkout, so a real provider call has **not** been verified.
 
 ## Verification and remaining work
 
