@@ -16,8 +16,8 @@ import type { Action, Card, Scenario } from "@/blackjack";
 import { DEFAULT_RULES, createRng, dealHoleCard, drawCard, generateScenario } from "@/blackjack";
 import type { RunState } from "@/training/run";
 
+import { decideAndEmit } from "./decideAndEmit";
 import {
-  applyDecision,
   createInitialSessionState,
   sessionReducer,
   type SessionEvent,
@@ -142,11 +142,11 @@ export function usePracticeSession(
         decidedAt: new Date().toISOString(),
       };
 
-      // Computed directly via `applyDecision` (rather than reading
+      // Computed directly via `decideAndEmit` (rather than reading
       // `dispatchAndSync`'s returned state back) so `onDecision` fires
       // with the exact record this call produced, never a stale or
       // mismatched one from the tail of `decisions`.
-      const { record } = applyDecision(stateRef.current, event);
+      const { record } = decideAndEmit(stateRef.current, event);
       dispatchAndSync(event);
       if (record) onDecision?.(record);
     },
