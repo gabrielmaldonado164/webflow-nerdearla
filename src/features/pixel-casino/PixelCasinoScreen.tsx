@@ -16,8 +16,8 @@ import { keyToCommand } from "./keyboard";
 import { OutcomeBanner } from "./OutcomeBanner";
 import { loadBestScore, saveBestScore } from "./preferences";
 import { CORRECT_DECISION_XP, INCORRECT_DECISION_XP } from "./progress";
+import { planImmediateCue, planTimedReveal } from "./revealPlan";
 import {
-  buildRevealSchedule,
   DEFAULT_REVEAL_TIMING,
   INSTANT_REVEAL_TIMING,
   revealedDealerCards,
@@ -162,42 +162,25 @@ export function PixelCasinoScreen() {
   }
 
   // Schedules the reveal timeline (extra cards landing, the hole-card
-  // flip, then the outcome banner) and their sound cues. `playRef` keeps
-  // `play` out of the dependency list on purpose (see above). A decision
-  // that ends the run freezes the table: nothing is revealed or played
-  // behind the game-over overlay.
+  // flip, then the outcome banner) and their sound cues, as computed by
+  // the pure `planTimedReveal` (see `revealPlan.ts`): this effect just
+  // turns each planned step into a `setTimeout` and clears them on
+  // cleanup. `playRef` keeps `play` out of the dependency list on purpose
+  // (see above). A decision that ends the run freezes the table —
+  // `planTimedReveal` returns no steps at all, so nothing is revealed or
+  // played behind the game-over overlay.
   const runOver = run.status === "over";
   useEffect(() => {
-    if (!feedback || runOver) return;
     const timing = reduceMotion ? INSTANT_REVEAL_TIMING : DEFAULT_REVEAL_TIMING;
-    const steps = feedback.resolution.steps;
-    const schedule = buildRevealSchedule(steps, timing);
-    const timers: number[] = [];
+    const plan = planTimedReveal(feedback, runOver, timing);
 
-    steps.forEach((_, index) => {
-      timers.push(
-        window.setTimeout(() => {
-          setRevealedStepCount((count) => Math.max(count, index + 1));
-          playRef.current("deal");
-        }, schedule.stepRevealAt[index]),
-      );
-    });
-
-    timers.push(
+    const timers = plan.map((step) =>
       window.setTimeout(() => {
-        setHoleRevealed(true);
-        playRef.current("flip");
-      }, schedule.holeCardFlipAt),
-    );
-
-    timers.push(
-      window.setTimeout(() => {
-        setShowOutcome(true);
-        const hands = feedback.resolution.playerHands;
-        const anyWin = hands.some((hand) => hand.outcome === "win" || hand.outcome === "blackjack");
-        const allPush = hands.every((hand) => hand.outcome === "push");
-        playRef.current(anyWin ? "win" : allPush ? "push" : "lose");
-      }, schedule.outcomeAt),
+        if (step.kind === "step") setRevealedStepCount((count) => Math.max(count, step.index + 1));
+        else if (step.kind === "hole") setHoleRevealed(true);
+        else setShowOutcome(true);
+        playRef.current(step.sound);
+      }, step.atMs),
     );
 
     return () => {
@@ -207,12 +190,14 @@ export function PixelCasinoScreen() {
 
   // Immediate decision-grading feedback: correct/mistake sound, plus
   // mistake juice (screen shake is CSS-only via .stageMiss below;
-  // vibration is skipped under reduced motion, same as the shake).
+  // vibration is skipped under reduced motion, same as the shake). The
+  // cue and vibrate decision come from the pure `planImmediateCue`: once
+  // the run is over, it swaps the mistake sound for silence since the
+  // game-over cue (below) replaces it, but vibration is unaffected.
   useEffect(() => {
-    if (!feedback) return;
-    // The game-over cue (below) replaces the mistake cue on the final miss.
-    if (!runOver) playRef.current(feedback.isCorrect ? "correct" : "mistake");
-    if (!feedback.isCorrect && !reduceMotion) {
+    const cue = planImmediateCue(feedback, runOver);
+    if (cue.sound) playRef.current(cue.sound);
+    if (cue.vibrate && !reduceMotion) {
       try {
         navigator.vibrate?.(120);
       } catch {
