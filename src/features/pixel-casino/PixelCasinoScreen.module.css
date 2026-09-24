@@ -51,6 +51,11 @@
 .overheadLight { position: absolute; z-index: 2; inset: 7% 5% 0; pointer-events: none; background: radial-gradient(ellipse at 50% 25%, #e4be7036 0%, #e4be7011 36%, transparent 72%); mix-blend-mode: screen; }
 .sceneTop { position: absolute; z-index: 7; left: 13px; right: 13px; top: 11px; display: flex; justify-content: space-between; gap: 10px; font: 900 9px "Courier New", monospace; color: #f5e8c4; letter-spacing: .08em; text-shadow: 2px 2px #06140d; }
 .sceneTop span:last-child { color: var(--mint); }
+.coach { position: absolute; z-index: 6; right: 2%; top: 15%; width: 68px; filter: drop-shadow(4px 6px 0 #071b18b3); pointer-events: none; }
+.coach > img { display: block; width: 100%; height: auto; object-fit: contain; image-rendering: pixelated; }
+.coachBubble { position: absolute; z-index: 2; top: -14px; left: -22px; display: block; padding: 4px 5px; border: 2px solid #233a2a; background: #f8edc9; color: #21402f; white-space: nowrap; font: 900 7px "Courier New", monospace; box-shadow: 3px 3px 0 #081710; transform: rotate(-4deg); }
+.coachCelebrate img { animation: coachHop .8s steps(6, end) both; }
+@keyframes coachHop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-14px); } 70% { transform: translateY(3px); } }
 .cardDeck { position: absolute; z-index: 5; top: 35%; right: 6%; width: 36px; height: 49px; transform: rotate(15deg) skewY(-5deg); filter: drop-shadow(5px 6px 0 #07110e); pointer-events: none; }
 .cardDeck i { position: absolute; inset: 0; display: block; border: 3px solid #f5edda; background: repeating-conic-gradient(#164d54 0 25%, #123743 0 50%) 50% / 8px 8px; box-shadow: inset 0 0 0 3px #1c4550, 2px 2px 0 #081b1a; }
 .cardDeck i:first-child { transform: translate(-9px, 9px); }
@@ -66,8 +71,6 @@
 .felt { position: absolute; z-index: 2; inset: 12px 10px 28px; overflow: hidden; clip-path: polygon(20% 0,80% 0,80% 3%,87% 3%,87% 7%,92% 7%,92% 13%,96% 13%,96% 23%,100% 23%,100% 86%,96% 86%,96% 95%,88% 95%,88% 100%,12% 100%,12% 95%,4% 95%,4% 86%,0 86%,0 23%,4% 23%,4% 13%,8% 13%,8% 7%,13% 7%,13% 3%,20% 3%); background: radial-gradient(ellipse at 50% 16%, #24734e 0, #12583b 44%, #083923 100%); box-shadow: inset 0 12px 15px #031a1177, inset 0 -24px 25px #001d12a8; }
 .feltGrain { position: absolute; inset: 0; opacity: .14; pointer-events: none; background-image: repeating-linear-gradient(0deg, #f9e8b0 0 1px, transparent 1px 5px), repeating-linear-gradient(90deg, #030d07 0 1px, transparent 1px 6px); }
 .feltArc { position: absolute; left: 9%; right: 9%; top: 18%; bottom: -54%; border: 3px dashed #d8c28048; border-radius: 50%; box-shadow: 0 0 0 2px #06291d3d; }
-.dealerCharacter { position: absolute; z-index: 2; top: 3%; left: 50%; width: clamp(100px, 25%, 205px); transform: translateX(-135%); pointer-events: none; }
-.dealerCharacter img { display: block; width: 100%; height: auto; object-fit: contain; image-rendering: pixelated; }
 .dealerHand, .playerHand { position: absolute; z-index: 3; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; transform: rotateX(-10deg); }
 .dealerHand { top: 5%; }
 .playerHand { bottom: 8%; }
@@ -200,6 +203,8 @@
   .stage { height: clamp(600px, 70vh, 680px); }
   .roomArt { object-position: 50% 24%; }
   .sceneTop { top: 18px; left: 22px; right: 22px; font-size: 12px; }
+  .coach { width: 118px; right: 5%; top: 17%; }
+  .coachBubble { font-size: 10px; padding: 6px 8px; top: -8px; left: -33px; }
   .cardDeck { width: 49px; height: 67px; right: 7%; top: 38%; }
   .cardDeck i:last-child::after { font-size: 10px; }
   .tableCamera { top: 20%; bottom: 5%; left: 3%; right: 3%; }

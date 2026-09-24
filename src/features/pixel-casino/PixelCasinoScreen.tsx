@@ -341,6 +341,10 @@ export function PixelCasinoScreen() {
             <div className={styles.roomShade} aria-hidden="true" />
             <div className={styles.overheadLight} aria-hidden="true" />
             <div className={styles.sceneTop}><span>STRATEGY TABLE</span><span>HAND {handNumber.toString().padStart(2, "0")}</span></div>
+            <div className={`${styles.coach} ${feedback?.isCorrect ? styles.coachCelebrate : ""}`} aria-hidden="true">
+              <span className={styles.coachBubble}>{isGameOver ? "TABLE'S CLOSED!" : feedback ? (feedback.isCorrect ? "NICE READ!" : "LEARN IT!") : "YOUR MOVE!"}</span>
+              <Image src="/characters/dealer.png" alt="" width={1224} height={1285} unoptimized />
+            </div>
             <div className={styles.cardDeck} aria-hidden="true"><i /><i /><i /><i /></div>
 
             <div className={styles.tableShadow} aria-hidden="true" />
@@ -351,15 +355,6 @@ export function PixelCasinoScreen() {
                 <div className={styles.felt}>
                   <div className={styles.feltGrain} aria-hidden="true" />
                   <div className={styles.feltArc} aria-hidden="true" />
-                  <div className={styles.dealerCharacter}>
-                    <Image
-                      src="/characters/dealer.png"
-                      alt="Pixel-art blackjack dealer in an emerald vest and visor"
-                      width={1224}
-                      height={1285}
-                      unoptimized
-                    />
-                  </div>
                   <div className={styles.dealerHand}>
                     <div className={styles.handName}>DEALER <b>{dealerVisibleCards && holeRevealed ? handTotalLabel(dealerVisibleCards) : scenario ? rankValue(scenario.dealerUpcard.rank) : "·"}</b></div>
                     <div className={styles.cardFan} key={`dealer-${handSequence}`}>
