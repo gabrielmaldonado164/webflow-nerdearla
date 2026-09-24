@@ -63,6 +63,26 @@ describe("sendDecision", () => {
     expect(() => sendDecision(RECORD)).not.toThrow();
   });
 
+  it("returns a promise that resolves once the POST settles successfully", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 201 })));
+    await expect(sendDecision(RECORD)).resolves.toBeUndefined();
+  });
+
+  it("resolves (never rejects) when fetch rejects", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    await expect(sendDecision(RECORD)).resolves.toBeUndefined();
+  });
+
+  it("resolves (never rejects) when fetch throws synchronously", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => {
+        throw new Error("network down");
+      }),
+    );
+    await expect(sendDecision(RECORD)).resolves.toBeUndefined();
+  });
+
   it("swallows a rejected fetch without an unhandled rejection", async () => {
     // Deliberately a plain function, not `vi.fn()`: vitest's spy wrapper
     // internally attaches its own `.then(onFulfilled, onRejected)` to

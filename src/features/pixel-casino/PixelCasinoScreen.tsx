@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Action, Card, ScenarioCategory, Suit } from "@/blackjack";
 import { handValue, rankValue } from "@/blackjack";
 import { sendDecision } from "@/features/practice/sendDecision";
+import type { DecisionRecord } from "@/features/practice/types";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { handTotalLabel } from "./handTotalLabel";
@@ -115,6 +116,23 @@ function HoleCard({ card, revealed, dealIndex }: HoleCardProps) {
 }
 
 export function PixelCasinoScreen() {
+  // Persists a decision, then — once (and only once) that POST has
+  // genuinely settled (see `sendDecision`'s resolve-never-reject
+  // contract) — asks the Skill Map data source to refetch (T5: replaces
+  // a blind fixed-delay timer keyed off the decision count, which could
+  // lag or fire before the write actually finished). `notifyDecisionSettledRef`
+  // is populated below, once `useSkillMapData` exists; using a ref
+  // (rather than a direct dependency) lets `handleDecision` stay a
+  // stable identity and keeps this declared before `usePracticeSession`,
+  // which needs it as `onDecision`. The game itself never awaits this —
+  // `usePracticeSession` calls `onDecision` fire-and-forget.
+  const notifyDecisionSettledRef = useRef<() => void>(() => {});
+  const handleDecision = useCallback((record: DecisionRecord) => {
+    void sendDecision(record).then(() => {
+      notifyDecisionSettledRef.current();
+    });
+  }, []);
+
   const {
     scenario,
     feedback,
@@ -126,7 +144,7 @@ export function PixelCasinoScreen() {
     restart,
     setBestScore,
     setWeights,
-  } = usePracticeSession({ onDecision: sendDecision });
+  } = usePracticeSession({ onDecision: handleDecision });
   const { muted, toggleMuted, play } = useSound();
   const [showClue, setShowClue] = useState(false);
   const [pendingAction, setPendingAction] = useState<Action | null>(null);
@@ -139,10 +157,12 @@ export function PixelCasinoScreen() {
   const [focusWeakness, setFocusWeakness] = useState(false);
   const runOverForSkillMap = run.status === "over";
   const skillMapActive = skillMapOpen || runOverForSkillMap;
-  const { data: skillMapServerData } = useSkillMapData({
+  const { data: skillMapServerData, notifyDecisionSettled } = useSkillMapData({
     active: skillMapActive,
-    decisionsCount: decisions.length,
   });
+  useEffect(() => {
+    notifyDecisionSettledRef.current = notifyDecisionSettled;
+  }, [notifyDecisionSettled]);
   const skillMapViewModel = useMemo(
     () => buildSkillMapViewModel({ server: skillMapServerData, session: stats }),
     [skillMapServerData, stats],
