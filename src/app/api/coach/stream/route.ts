@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 
 import { parseCoachRequest } from "@/coach/request";
 import { startCoachStream } from "@/coach/stream";
-import { reserveCoachCall } from "@/coach/rateLimit";
+import { getCoachUsage, releaseCoachCall, reserveCoachCall } from "@/coach/rateLimit";
 import { getDb } from "@/db/client";
 import { ensurePlayer } from "@/db/decisionsRepository";
 import { PLAYER_COOKIE_NAME, playerCookieOptions, resolvePlayerId } from "@/player/playerCookie";
@@ -43,11 +43,13 @@ export async function POST(request: Request): Promise<Response> {
 
   const cookieStore = await cookies();
   const { playerId } = resolvePlayerId(cookieStore.get(PLAYER_COOKIE_NAME)?.value);
+  const today = new Date().toISOString().slice(0, 10);
+  let remaining: number;
   try {
     await ensurePlayer(getDb(), playerId);
-    const today = new Date().toISOString().slice(0, 10);
     const allowed = await reserveCoachCall(env.DB, playerId, today);
-    if (!allowed) return Response.json({ error: "daily coach limit reached" }, { status: 429 });
+    if (!allowed) return Response.json({ error: "daily coach limit reached", remaining: 0 }, { status: 429 });
+    remaining = (await getCoachUsage(env.DB, playerId, today)).remaining;
   } catch (error) {
     console.error("Failed to reserve coach call:", error);
     return Response.json({ error: "coach unavailable" }, { status: 503 });
@@ -57,13 +59,33 @@ export async function POST(request: Request): Promise<Response> {
   const { name, value, ...options } = cookie;
   cookieStore.set(name, value, options);
 
+  // Refunds the slot reserved above when the provider fails before any
+  // text is delivered, so the player never loses a question to an
+  // outage. A stream interrupted after text was sent still counts.
+  const refund = async (): Promise<number> => {
+    try {
+      await releaseCoachCall(env.DB, playerId, today);
+    } catch (error) {
+      console.error("Failed to refund coach call:", error);
+    }
+    try {
+      return (await getCoachUsage(env.DB, playerId, today)).remaining;
+    } catch (error) {
+      console.error("Failed to read coach usage after refund:", error);
+      return remaining;
+    }
+  };
+
   try {
     const iterable = await startCoachStream(parsed.value, playerId, { apiKey, model });
     const iterator = iterable[Symbol.asyncIterator]();
     // Preflight the first text chunk so provider failures return a real 503
     // rather than an empty 200 stream that would overwrite the template.
     const first = await iterator.next();
-    if (first.done) return Response.json({ error: "coach unavailable" }, { status: 503 });
+    if (first.done) {
+      const refunded = await refund();
+      return Response.json({ error: "coach unavailable", remaining: refunded }, { status: 503 });
+    }
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -83,10 +105,15 @@ export async function POST(request: Request): Promise<Response> {
       cancel() { void iterator.return?.(); },
     });
     return new Response(stream, {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store",
+        "X-Coach-Remaining": String(remaining),
+      },
     });
   } catch (error) {
     console.error("Coach provider unavailable:", error);
-    return Response.json({ error: "coach unavailable" }, { status: 503 });
+    const refunded = await refund();
+    return Response.json({ error: "coach unavailable", remaining: refunded }, { status: 503 });
   }
 }
