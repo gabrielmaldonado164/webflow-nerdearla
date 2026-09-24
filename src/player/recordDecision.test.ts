@@ -147,7 +147,14 @@ describe("recordDecision", () => {
     expect(() => new Date(result.row.createdAt).toISOString()).not.toThrow();
   });
 
-  it("returns ok:false instead of throwing when an engine call throws on unexpected input", async () => {
+  it("propagates instead of swallowing when an engine call throws unexpectedly", async () => {
+    // The payload guard (parseDecisionPayload) now rejects impossible hands
+    // (bust/21+, oversized) before recordDecision ever runs, so a genuine
+    // engine throw here is an unexpected defect, not a routine domain
+    // rejection. It must surface to the caller (the API handler's 500
+    // path, which logs it server-side) instead of being remapped to a
+    // client-facing `{ ok: false, reason: error.message }` 400 — the
+    // latter would leak internal error text straight to the client.
     vi.doMock("@/blackjack", async () => {
       const actual = await vi.importActual<typeof import("@/blackjack")>("@/blackjack");
       return {
@@ -163,19 +170,17 @@ describe("recordDecision", () => {
     );
     const repo = fakeRepo();
 
-    const result = await recordDecisionWithMockedEngine(
-      {
-        playerId: PLAYER_ID,
-        playerCards: [card("10"), card("6")],
-        dealerUpcard: card("10"),
-        userAction: "hit",
-      },
-      repo,
-    );
-
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.reason).toContain("engine: unexpected input");
+    await expect(
+      recordDecisionWithMockedEngine(
+        {
+          playerId: PLAYER_ID,
+          playerCards: [card("10"), card("6")],
+          dealerUpcard: card("10"),
+          userAction: "hit",
+        },
+        repo,
+      ),
+    ).rejects.toThrow("engine: unexpected input");
     expect(repo.inserted).toHaveLength(0);
   });
 

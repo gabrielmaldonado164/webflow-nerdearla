@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DecisionRow } from "@/player/recordDecision";
 
@@ -7,6 +7,15 @@ import { handleDecisionRequest } from "./handler";
 
 const VALID_EXISTING_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 const MINTED_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+
+// Resets the module registry after every test so a `vi.doMock` +
+// dynamic `import()` in one test (see the engine-throw case below) is
+// guaranteed a fresh re-evaluation, not a cached module from an
+// earlier test or from this file's own static `import` above.
+afterEach(() => {
+  vi.resetModules();
+  vi.doUnmock("@/blackjack");
+});
 
 const validBody = JSON.stringify({
   playerCards: [
@@ -196,5 +205,32 @@ describe("handleDecisionRequest", () => {
     const result = await handleDecisionRequest(validBody, deps);
 
     expect(result.setCookie).toMatchObject({ secure: true });
+  });
+
+  it("returns 500 with a generic body and logs when an engine call throws unexpectedly (does not leak error.message)", async () => {
+    vi.doMock("@/blackjack", async () => {
+      const actual = await vi.importActual<typeof import("@/blackjack")>("@/blackjack");
+      return {
+        ...actual,
+        optimalAction: () => {
+          throw new Error("engine: unexpected input");
+        },
+      };
+    });
+
+    const { handleDecisionRequest: handleWithMockedEngine } = await import("./handler");
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const repo = fakeRepo();
+    const deps = baseDeps({ repo });
+
+    const result = await handleWithMockedEngine(validBody, deps);
+
+    expect(result.status).toBe(500);
+    expect(result.body.error).not.toContain("engine: unexpected input");
+    expect(result.body).not.toHaveProperty("stack");
+    expect(repo.inserted).toHaveLength(0);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
   });
 });

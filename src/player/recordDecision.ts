@@ -45,37 +45,30 @@ export type RecordDecisionResult =
  * Re-grades `input` with the engine and, when the user's action was
  * actually available on that hand, inserts the resulting row via `repo`.
  *
- * An engine call throwing on unexpected input (a domain error — e.g. a
- * shape `parseDecisionPayload` didn't catch) is caught and returned as
- * `{ ok: false }`, same as a legal-but-unavailable action, so the route
- * can map it to a `400` instead of it bubbling up as a `500`. A
- * repository failure is NOT caught here: it still propagates (rejects)
- * so the caller (the API route) maps it to `500`.
+ * `{ ok: false }` is only ever returned for the one expected domain
+ * rejection this function itself decides: a `userAction` that isn't in
+ * the hand's `availableActions`. `input` is assumed already
+ * shape-valid and not bust/21+ (`parseDecisionPayload` rejects those
+ * before this runs), so an engine call throwing anyway is an
+ * unexpected defect, not a routine rejection — it is NOT caught here
+ * and propagates (rejects), same as a repository failure, so the
+ * caller (the API route) maps both to `500` and logs the real error
+ * server-side instead of echoing it to the client.
  */
 export async function recordDecision(
   input: RecordDecisionInput,
   repo: DecisionRepository,
 ): Promise<RecordDecisionResult> {
-  let actions: Action[];
-  let optimal: Action;
-  let category: ScenarioCategory;
-  try {
-    actions = availableActions(input.playerCards, DEFAULT_RULES);
-    if (!actions.includes(input.userAction)) {
-      return {
-        ok: false,
-        reason: `"${input.userAction}" is not available for this hand`,
-      };
-    }
-
-    optimal = optimalAction(input.playerCards, input.dealerUpcard, DEFAULT_RULES);
-    ({ category } = classifyScenario(input.playerCards));
-  } catch (error) {
+  const actions: Action[] = availableActions(input.playerCards, DEFAULT_RULES);
+  if (!actions.includes(input.userAction)) {
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : "invalid decision input",
+      reason: `"${input.userAction}" is not available for this hand`,
     };
   }
+
+  const optimal: Action = optimalAction(input.playerCards, input.dealerUpcard, DEFAULT_RULES);
+  const { category }: { category: ScenarioCategory } = classifyScenario(input.playerCards);
 
   const row: DecisionRow = {
     id: crypto.randomUUID(),
