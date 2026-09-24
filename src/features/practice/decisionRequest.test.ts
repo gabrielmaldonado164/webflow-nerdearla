@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Card } from "@/blackjack";
 
@@ -21,21 +21,19 @@ const RECORD: DecisionRecord = {
   decidedAt: "2026-09-23T12:00:00.000Z",
 };
 
-const ORIGINAL_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH;
-
 afterEach(() => {
-  process.env.NEXT_PUBLIC_BASE_PATH = ORIGINAL_BASE_PATH;
+  vi.unstubAllEnvs();
 });
 
 describe("buildDecisionRequest", () => {
   it("targets /api/decisions with no base path configured", () => {
-    delete process.env.NEXT_PUBLIC_BASE_PATH;
+    vi.stubEnv("NEXT_PUBLIC_BASE_PATH", undefined);
     const request = buildDecisionRequest(RECORD);
     expect(request.url).toBe("/api/decisions");
   });
 
   it("prefixes the URL with NEXT_PUBLIC_BASE_PATH when set", () => {
-    process.env.NEXT_PUBLIC_BASE_PATH = "/mount";
+    vi.stubEnv("NEXT_PUBLIC_BASE_PATH", "/mount");
     const request = buildDecisionRequest(RECORD);
     expect(request.url).toBe("/mount/api/decisions");
   });
@@ -58,5 +56,16 @@ describe("buildDecisionRequest", () => {
     expect(parsed).not.toHaveProperty("category");
     expect(parsed).not.toHaveProperty("label");
     expect(parsed).not.toHaveProperty("decidedAt");
+  });
+
+  it("restores an originally-unset NEXT_PUBLIC_BASE_PATH as truly undefined, not the string \"undefined\"", () => {
+    // Regression guard for a real bug: naively restoring with
+    // `process.env.X = originalValue` coerces `undefined` to the
+    // string "undefined" (env vars are always strings), which then
+    // leaks into every later test/module that reads this var. This
+    // test runs after other tests in this file have already mutated
+    // and "restored" NEXT_PUBLIC_BASE_PATH via afterEach, so it
+    // exercises the actual cleanup path, not just a fresh state.
+    expect(process.env.NEXT_PUBLIC_BASE_PATH).toBeUndefined();
   });
 });
