@@ -44,7 +44,14 @@ export async function fetchCoachEvidence(hand: CoachHand, signal: AbortSignal): 
 export type CoachStreamOutcome =
   | { kind: "ok"; remaining: number | null }
   | { kind: "limit"; remaining: 0 }
-  | { kind: "unavailable"; remaining: number | null };
+  /**
+   * `refunded` is true only when the server confirmed it released the
+   * reserved slot: a 503 JSON body with a numeric `remaining` (the
+   * post-refund read). It is false for a network error, a pre-reservation
+   * 503 (no numeric `remaining`, nothing was ever reserved), and an empty
+   * 200 stream (the server does not refund a slot for that case).
+   */
+  | { kind: "unavailable"; remaining: number | null; refunded: boolean };
 
 /** Non-negative integer or `null`; rejects anything else (NaN, floats, negatives, wrong type). */
 function parseRemaining(value: unknown): number | null {
@@ -79,7 +86,11 @@ export async function streamCoachReply(
       return { kind: "limit", remaining: 0 };
     }
     if (!response.ok || !response.body) {
-      return { kind: "unavailable", remaining: await readRemainingFromBody(response) };
+      const remaining = await readRemainingFromBody(response);
+      // Only a 503 with a numeric `remaining` is the server's post-refund
+      // read; any other non-2xx (a pre-reservation 503, a 500, etc.) never
+      // confirms a refund, even if it happens to carry a numeric body.
+      return { kind: "unavailable", remaining, refunded: response.status === 503 && remaining !== null };
     }
 
     const remaining = parseRemaining(
@@ -103,10 +114,11 @@ export async function streamCoachReply(
     text += decoder.decode();
     onText(text);
 
-    if (text.trim().length === 0) return { kind: "unavailable", remaining };
+    // A 200 with an empty stream is never a server-confirmed refund.
+    if (text.trim().length === 0) return { kind: "unavailable", remaining, refunded: false };
     return { kind: "ok", remaining };
   } catch {
-    return { kind: "unavailable", remaining: null };
+    return { kind: "unavailable", remaining: null, refunded: false };
   }
 }
 

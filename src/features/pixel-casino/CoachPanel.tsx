@@ -3,7 +3,7 @@
 import { ChatCircleDots, Sparkle, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { coachQuotaCopy, type CoachQuotaState } from "./coachQuotaCopy";
+import { coachQuotaCopy, shouldApplyUsageFetch, type CoachQuotaState } from "./coachQuotaCopy";
 import type { CoachEvidence, CoachHand } from "./coachRequest";
 import { fetchCoachEvidence, fetchCoachUsage, streamCoachReply } from "./coachRequest";
 import styles from "./CoachPanel.module.css";
@@ -26,7 +26,7 @@ export function CoachPanel({ open, mode, hand, template, onClose }: CoachPanelPr
   const [question, setQuestion] = useState("");
   const [waiting, setWaiting] = useState(false);
   const [source, setSource] = useState<"ai" | "template" | null>(null);
-  const [quota, setQuota] = useState<CoachQuotaState>({ limit: null, remaining: null, outcomeKind: null });
+  const [quota, setQuota] = useState<CoachQuotaState>({ limit: null, remaining: null, outcomeKind: null, refunded: false });
   const controllerRef = useRef<AbortController | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -44,6 +44,7 @@ export function CoachPanel({ open, mode, hand, template, onClose }: CoachPanelPr
       limit: previous.limit,
       remaining: outcome.remaining ?? previous.remaining,
       outcomeKind: outcome.kind,
+      refunded: outcome.kind === "unavailable" && outcome.refunded,
     }));
     if (outcome.kind === "ok") {
       setSource("ai");
@@ -69,7 +70,9 @@ export function CoachPanel({ open, mode, hand, template, onClose }: CoachPanelPr
     const usageController = new AbortController();
     void fetchCoachUsage(usageController.signal).then((usage) => {
       if (usageController.signal.aborted || !usage) return;
-      setQuota((previous) => ({ limit: usage.limit, remaining: usage.remaining, outcomeKind: previous.outcomeKind }));
+      setQuota((previous) => shouldApplyUsageFetch(previous)
+        ? { limit: usage.limit, remaining: usage.remaining, outcomeKind: previous.outcomeKind, refunded: previous.refunded }
+        : previous);
     });
     return () => usageController.abort();
   }, [open]);

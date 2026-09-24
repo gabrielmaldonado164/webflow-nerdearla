@@ -60,14 +60,14 @@ describe("coach requests", () => {
     expect(result).toEqual({ kind: "ok", remaining: null });
   });
 
-  it("treats an empty stream on a 200 as unavailable, not ok", async () => {
+  it("treats an empty stream on a 200 as unavailable, not ok, and never claims a refund", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(new ReadableStream({
       start(controller) {
         controller.close();
       },
     }), { status: 200, headers: { "X-Coach-Remaining": "12" } })));
     const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
-    expect(result).toEqual({ kind: "unavailable", remaining: 12 });
+    expect(result).toEqual({ kind: "unavailable", remaining: 12, refunded: false });
   });
 
   it("reports a distinct limit outcome for a 429 with remaining 0", async () => {
@@ -83,21 +83,29 @@ describe("coach requests", () => {
       error: "coach unavailable", remaining: 9,
     }), { status: 503 })));
     const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
-    expect(result).toEqual({ kind: "unavailable", remaining: 9 });
+    expect(result).toEqual({ kind: "unavailable", remaining: 9, refunded: true });
   });
 
-  it("reports unavailable with a null remaining when a pre-reservation 503 omits it", async () => {
+  it("reports unavailable with a null remaining when a pre-reservation 503 omits it, and does not claim a refund", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       error: "coach unavailable",
     }), { status: 503 })));
     const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
-    expect(result).toEqual({ kind: "unavailable", remaining: null });
+    expect(result).toEqual({ kind: "unavailable", remaining: null, refunded: false });
   });
 
-  it("reports unavailable with a null remaining on a network error or abort", async () => {
+  it("reports unavailable with a null remaining on a network error or abort, and does not claim a refund", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
     const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
-    expect(result).toEqual({ kind: "unavailable", remaining: null });
+    expect(result).toEqual({ kind: "unavailable", remaining: null, refunded: false });
+  });
+
+  it("does not claim a refund for a non-503, non-429 error status even with a numeric remaining", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: "server error", remaining: 5,
+    }), { status: 500 })));
+    const result = await streamCoachReply({ mode: "why", hand }, new AbortController().signal, vi.fn());
+    expect(result).toEqual({ kind: "unavailable", remaining: 5, refunded: false });
   });
 });
 

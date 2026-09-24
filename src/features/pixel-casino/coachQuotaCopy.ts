@@ -3,13 +3,17 @@
  * notes. `limit` comes from `GET /api/coach/usage` (once, on open);
  * `remaining` starts from that same fetch and is refreshed after each
  * `streamCoachReply` outcome; `outcomeKind` is the last stream outcome's
- * kind, or `null` before any stream has completed.
+ * kind, or `null` before any stream has completed; `refunded` is that
+ * outcome's server-confirmed refund flag (only meaningful when
+ * `outcomeKind === "unavailable"`).
  */
 
 export interface CoachQuotaState {
   limit: number | null;
   remaining: number | null;
   outcomeKind: "ok" | "limit" | "unavailable" | null;
+  /** Server-confirmed refund for the last `unavailable` outcome; ignored otherwise. */
+  refunded: boolean;
 }
 
 export interface CoachQuotaCopy {
@@ -17,19 +21,31 @@ export interface CoachQuotaCopy {
   counter: string | null;
   /** Distinct note shown only right after a `limit` outcome. */
   limitMessage: string | null;
-  /** Reassurance shown only after an `unavailable` outcome whose remaining count is known (refunded). */
+  /** Reassurance shown only after an `unavailable` outcome the server confirmed it refunded. */
   refundMessage: string | null;
 }
 
 const LIMIT_MESSAGE = "Daily AI limit reached. It resets at 00:00 UTC; the built-in explanations still work.";
 const REFUND_MESSAGE = "This didn't use one of your questions.";
 
-export function coachQuotaCopy({ limit, remaining, outcomeKind }: CoachQuotaState): CoachQuotaCopy {
+export function coachQuotaCopy({ limit, remaining, outcomeKind, refunded }: CoachQuotaState): CoachQuotaCopy {
   const counter = limit !== null && remaining !== null ? `${remaining}/${limit} AI questions left today` : null;
 
   return {
     counter,
     limitMessage: outcomeKind === "limit" ? LIMIT_MESSAGE : null,
-    refundMessage: outcomeKind === "unavailable" && remaining !== null ? REFUND_MESSAGE : null,
+    refundMessage: outcomeKind === "unavailable" && refunded ? REFUND_MESSAGE : null,
   };
+}
+
+/**
+ * Guards the usage-fetch-vs-stream-outcome race in `CoachPanel`: the
+ * usage `GET` fired on open and the auto-asked "why" stream can resolve
+ * in either order. Once any stream outcome has already updated quota
+ * (`outcomeKind !== null`), a later-resolving usage response is stale by
+ * definition — the stream outcome is always at least as recent — so it
+ * must be ignored instead of overwriting a newer `remaining`.
+ */
+export function shouldApplyUsageFetch(current: CoachQuotaState): boolean {
+  return current.outcomeKind === null;
 }
