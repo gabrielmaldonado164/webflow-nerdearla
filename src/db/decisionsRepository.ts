@@ -13,21 +13,45 @@ import { decisions, players } from "./schema";
 
 type Db = ReturnType<typeof getDb>;
 
+/** Shape of a `decisions` row as Drizzle's `.values()` expects it. */
+export interface DecisionInsertValues {
+  id: string;
+  playerId: string;
+  playerCards: string;
+  dealerUpcard: string;
+  availableActions: string;
+  userAction: DecisionRow["userAction"];
+  optimalAction: DecisionRow["optimalAction"];
+  isCorrect: boolean;
+  category: DecisionRow["category"];
+  createdAt: string;
+}
+
+/**
+ * Pure mapping from a domain `DecisionRow` to the D1 `decisions` table's
+ * insert shape: JSON-encodes the structured `playerCards`/`dealerUpcard`/
+ * `availableActions` fields into the table's text columns, and passes
+ * everything else through unchanged.
+ */
+export function decisionRowToInsertValues(row: DecisionRow): DecisionInsertValues {
+  return {
+    id: row.id,
+    playerId: row.playerId,
+    playerCards: JSON.stringify(row.playerCards),
+    dealerUpcard: JSON.stringify(row.dealerUpcard),
+    availableActions: JSON.stringify(row.availableActions),
+    userAction: row.userAction,
+    optimalAction: row.optimalAction,
+    isCorrect: row.isCorrect,
+    category: row.category,
+    createdAt: row.createdAt,
+  };
+}
+
 export function createD1DecisionRepository(db: Db): DecisionRepository {
   return {
     async insertDecision(row: DecisionRow) {
-      await db.insert(decisions).values({
-        id: row.id,
-        playerId: row.playerId,
-        playerCards: JSON.stringify(row.playerCards),
-        dealerUpcard: JSON.stringify(row.dealerUpcard),
-        availableActions: JSON.stringify(row.availableActions),
-        userAction: row.userAction,
-        optimalAction: row.optimalAction,
-        isCorrect: row.isCorrect,
-        category: row.category,
-        createdAt: row.createdAt,
-      });
+      await db.insert(decisions).values(decisionRowToInsertValues(row));
     },
   };
 }
