@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { PlayerStats } from "@/player/playerStats";
-import { CATEGORY_WEIGHT_BASE, MAX_WEAKNESS_FACTOR } from "@/training/weights";
+import { weightsFromStats } from "@/training/weights";
 
+import { INITIAL_SKILL_MAP_DATA_STATE, nextSkillMapData } from "./skillMapDataState";
 import { computeToggleWeights } from "./skillMapWeights";
+import type { StatsResponseBody } from "./skillMapStatsResponse";
 
 const STATS: PlayerStats = {
   totalDecisions: 15,
@@ -21,28 +23,27 @@ const STATS: PlayerStats = {
 };
 
 describe("computeToggleWeights", () => {
-  it("returns undefined (engine default uniform weighting) when there is no server data", () => {
+  it("returns undefined (engine default uniform weighting) whenever the toggle is off, regardless of server data", () => {
     expect(computeToggleWeights(null, false)).toBeUndefined();
+    expect(computeToggleWeights(STATS, false)).toBeUndefined();
+  });
+
+  it("returns undefined when the toggle is on but there is no server data yet (matches the offline-disabled toggle)", () => {
     expect(computeToggleWeights(null, true)).toBeUndefined();
   });
 
-  it("returns adaptive weights without focus when the toggle is off and data exists", () => {
-    const weights = computeToggleWeights(STATS, false);
-    // The fully-missed soft category should carry the max weakness
-    // factor, but not the extra focusWeakness multiplier.
-    expect(weights).toEqual({
-      hard: CATEGORY_WEIGHT_BASE,
-      soft: CATEGORY_WEIGHT_BASE + MAX_WEAKNESS_FACTOR,
-      pair: CATEGORY_WEIGHT_BASE + 0.2 * MAX_WEAKNESS_FACTOR,
-    });
+  it("returns weightsFromStats with focusWeakness when the toggle is on and server data exists", () => {
+    const weights = computeToggleWeights(STATS, true);
+    expect(weights).toEqual(weightsFromStats(STATS, { focusWeakness: true }));
   });
 
-  it("multiplies only the weakest category's weight when the toggle is on", () => {
-    const off = computeToggleWeights(STATS, false)!;
-    const on = computeToggleWeights(STATS, true)!;
+  it("stays unchanged when a refetch fails after a prior success (last-good data, T5 fix 1)", () => {
+    const result: StatsResponseBody = { stats: STATS, achievements: [] };
+    const afterSuccess = nextSkillMapData(INITIAL_SKILL_MAP_DATA_STATE, result);
+    const afterFailure = nextSkillMapData(afterSuccess, null);
 
-    expect(on.hard).toBe(off.hard);
-    expect(on.pair).toBe(off.pair);
-    expect(on.soft).toBeGreaterThan(off.soft!);
+    const before = computeToggleWeights(afterSuccess.data?.stats ?? null, true);
+    const after = computeToggleWeights(afterFailure.data?.stats ?? null, true);
+    expect(after).toEqual(before);
   });
 });

@@ -149,7 +149,7 @@ Goal: make 21 Lab feel like a web game, not a pretty page. Strategy grading stay
 **Current state (2026-09-23):** Phase 3 complete (T1-T4), committed on a stacked branch chain (not pushed), on top of Phase 2b: `feat/2b-t3-client-wiring` → `feat/3-t1-stats` (c010c43) → `feat/3-t2-achievements` (913b609) → `feat/3-t3-adaptive-weighting` (7445ba7) → `feat/3-t4-skill-map-ui` (7112745, plus 3 review-follow-up commits). Tracked in `odd/tasks/phase-3-stats-skill-map.md`. 483 tests, tsc, lint, build clean.
 - [x] Stats API: totals, accuracy, current and best streak, strongest and weakest category (`GET /api/stats`, T1)
 - [x] Skill Map UI: HUD "Skill Map" button opens a pixel-art overlay panel (per-category bars, accuracy, streaks, strongest/weakest, badge grid), falls back to in-session stats when `/api/stats` fails, short summary on the game-over overlay (T4)
-- [x] Adaptive scenario weighting (`weight = base + weaknessFactor`) logic and wiring, plus the "Practice weakness" toggle in the Skill Map panel calling `setWeights(weightsFromStats(...))` (`weightsFromStats`, `usePracticeSession.setWeights`, T3/T4)
+- [x] Adaptive scenario weighting (`weight = base + weaknessFactor`) logic and wiring, applied ONLY while the "Practice weakness" toggle is explicitly on — off always uses the engine's default uniform weighting (owner decision, 2026-09-24; `weightsFromStats`, `computeToggleWeights`, `usePracticeSession.setWeights`, T3/T4/T5)
 - [x] Achievements/badges derived from persisted decisions (`deriveAchievements`, included in `GET /api/stats`, T2), shown in the Skill Map panel's badge grid, hidden with an "unavailable offline" note when falling back to session stats (T4)
 
 ### Phase 4 — AI Coach (Thu 24 PM) — the differentiator

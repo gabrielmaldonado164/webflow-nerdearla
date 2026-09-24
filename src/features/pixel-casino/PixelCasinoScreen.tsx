@@ -155,11 +155,17 @@ export function PixelCasinoScreen() {
   );
   const gameOverSummary = useMemo(() => summarizeForGameOver(skillMapViewModel), [skillMapViewModel]);
 
-  // Applies adaptive practice weighting (T3's weightsFromStats) as soon
-  // as server stats are available, and re-applies it whenever the
-  // "Practice weakness" toggle or the fetched stats change. With no
-  // server stats yet (offline, or a brand-new player), this resolves to
-  // `undefined` — the engine's own default uniform weighting.
+  // Applies adaptive practice weighting ONLY while the "Practice
+  // weakness" toggle is explicitly on (owner decision, 2026-09-24, T5):
+  // the scenario distribution must never change without the player's
+  // explicit choice. `computeToggleWeights` owns that gating — off
+  // always resolves to `undefined` regardless of `skillMapServerData`,
+  // so fetching stats for the game-over summary (triggered merely by
+  // the run ending, via `skillMapActive`) never itself starts biasing
+  // scenario generation; only flipping the toggle does. A failed
+  // refetch also can't change the weights: `useSkillMapData` keeps the
+  // last good `skillMapServerData` (T5 fix 1), so this effect's input
+  // is unchanged and it's a no-op re-run.
   useEffect(() => {
     setWeights(computeToggleWeights(skillMapServerData?.stats ?? null, focusWeakness));
   }, [skillMapServerData, focusWeakness, setWeights]);
