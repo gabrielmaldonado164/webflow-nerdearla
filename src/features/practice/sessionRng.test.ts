@@ -63,6 +63,45 @@ describe("dealNextHandIfAllowed", () => {
   });
 });
 
+describe("dealNextHandIfAllowed weighting (Phase 3 T3)", () => {
+  it("forwards weights to generateScenario, shifting the category distribution", () => {
+    const state = createInitialSessionState();
+    const seed = 7;
+    const sampleSize = 60;
+
+    const unweightedRng = createRng(seed);
+    const unweightedCategories = Array.from(
+      { length: sampleSize },
+      () => dealNextHandIfAllowed(state, unweightedRng, DEFAULT_RULES)!.scenario.category,
+    );
+
+    const weightedRng = createRng(seed);
+    const weightedCategories = Array.from(
+      { length: sampleSize },
+      () =>
+        dealNextHandIfAllowed(state, weightedRng, DEFAULT_RULES, { hard: 1, soft: 1, pair: 100 })!.scenario
+          .category,
+    );
+
+    const pairShare = (categories: string[]) =>
+      categories.filter((c) => c === "pair").length / categories.length;
+
+    expect(pairShare(weightedCategories)).toBeGreaterThan(pairShare(unweightedCategories));
+    expect(pairShare(weightedCategories)).toBeGreaterThan(0.8);
+  });
+
+  it("behaves identically to omitting weights when weights is explicitly undefined", () => {
+    const state = createInitialSessionState();
+    const rngA = createRng(11);
+    const rngB = createRng(11);
+
+    const withoutParam = dealNextHandIfAllowed(state, rngA, DEFAULT_RULES);
+    const withUndefined = dealNextHandIfAllowed(state, rngB, DEFAULT_RULES, undefined);
+
+    expect(withUndefined).toEqual(withoutParam);
+  });
+});
+
 describe("resolveActionIfAllowed", () => {
   function dealtState(): SessionState {
     const rng = createRng(1);
