@@ -10,6 +10,8 @@ import { handValue, rankValue } from "@/blackjack";
 import { sendDecision } from "@/features/practice/sendDecision";
 import type { DecisionRecord } from "@/features/practice/types";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
+import { CoachPanel } from "./CoachPanel";
+import type { CoachHand } from "./coachRequest";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { handTotalLabel } from "./handTotalLabel";
 import { currentHandNumber } from "./handNumber";
@@ -147,6 +149,8 @@ export function PixelCasinoScreen() {
   } = usePracticeSession({ onDecision: handleDecision });
   const { muted, toggleMuted, play } = useSound();
   const [showClue, setShowClue] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachMode, setCoachMode] = useState<"why" | "chat">("chat");
   const [pendingAction, setPendingAction] = useState<Action | null>(null);
   const [handSequence, setHandSequence] = useState(0);
   const pendingTimer = useRef<number | null>(null);
@@ -325,7 +329,7 @@ export function PixelCasinoScreen() {
       // The Skill Map panel owns Esc itself and must be the only thing
       // reacting to keys while it's open — the table's H/S/D/P/Enter
       // shortcuts must not fire underneath it (T4 requirement).
-      if (skillMapOpen) return;
+      if (skillMapOpen || coachOpen) return;
       if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
       if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
       // Enter also activates a focused button (e.g. "Deal next hand"); let
@@ -346,7 +350,17 @@ export function PixelCasinoScreen() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [feedback, scenario, run.status, chooseAction, nextHand, restart, skillMapOpen]);
+  }, [feedback, scenario, run.status, chooseAction, nextHand, restart, skillMapOpen, coachOpen]);
+
+  const coachHand: CoachHand | null = useMemo(() => {
+    if (!scenario || !feedback) return null;
+    return {
+      playerCards: scenario.playerCards,
+      dealerUpcard: scenario.dealerUpcard,
+      availableActions: scenario.availableActions,
+      userAction: feedback.userAction,
+    };
+  }, [scenario, feedback]);
 
   const resolution = feedback?.resolution ?? null;
   const isSplit = (resolution?.playerHands.length ?? 0) > 1;
@@ -472,6 +486,7 @@ export function PixelCasinoScreen() {
                   accuracy={computeRunAccuracy(decisions, run.decisions)}
                   onRestart={restart}
                   summary={gameOverSummary}
+                  onWhy={feedback && !feedback.isCorrect ? () => { setCoachMode("why"); setCoachOpen(true); } : undefined}
                 />
               )}
             </AnimatePresence>
@@ -483,7 +498,7 @@ export function PixelCasinoScreen() {
             <AnimatePresence mode="wait">
               {feedback ? <motion.div key={`feedback-${stats.handsPlayed}`} className={`${styles.feedback} ${feedback.isCorrect ? styles.feedbackGood : styles.feedbackBad}`} initial={reduceMotion ? false : { opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={reduceMotion ? undefined : { opacity: 0 }} aria-live="polite">
                 <div className={styles.feedbackBadge}>{feedback.isCorrect ? <Trophy weight="fill" aria-hidden="true" /> : <BookOpen weight="fill" aria-hidden="true" />}</div>
-                <div className={styles.feedbackText}><strong>{feedback.isCorrect ? "Perfect move!" : "Not quite. Now you know."}</strong><p>{feedback.message}</p>{!feedback.isCorrect && <small>Best move: {bestAction}</small>}<span>+{feedback.isCorrect ? CORRECT_DECISION_XP : INCORRECT_DECISION_XP} SESSION XP</span></div>
+                <div className={styles.feedbackText}><strong>{feedback.isCorrect ? "Perfect move!" : "Not quite. Now you know."}</strong><p>{feedback.message}</p>{!feedback.isCorrect && <small>Best move: {bestAction}</small>}<span>+{feedback.isCorrect ? CORRECT_DECISION_XP : INCORRECT_DECISION_XP} SESSION XP</span>{!feedback.isCorrect && <button type="button" className={styles.whyButton} onClick={() => { setCoachMode("why"); setCoachOpen(true); }}>WHY? SEE THE ODDS</button>}</div>
                 {!isGameOver && <button type="button" className={styles.nextButton} onClick={nextHand}>DEAL NEXT HAND <ArrowRight weight="bold" aria-hidden="true" /></button>}
               </motion.div> : <motion.div key="actions" className={styles.actions} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 {ACTIONS.map(({ id, label, key, detail }) => <button key={id} type="button" className={`${styles.actionButton} ${pendingAction === id ? styles.actionPressed : ""} ${pendingAction === id && scenario?.optimalAction !== id ? styles.actionWrong : ""}`} disabled={!scenario || Boolean(pendingAction) || !scenario.availableActions.includes(id)} onClick={() => chooseAction(id)} aria-label={`${label}: ${detail}`}><kbd>{key}</kbd><strong>{label}</strong><span>{detail}</span></button>)}
@@ -501,6 +516,7 @@ export function PixelCasinoScreen() {
             return <div className={styles.skillRow} key={category}><span>{CATEGORY_LABEL[category]}</span><div className={styles.skillTrack}><i style={{ width: `${skill.accuracy ?? 0}%` }} /></div><b>{skill.accuracy === null ? "--" : `${skill.accuracy}%`}</b></div>;
           })}
           <div className={styles.panelPrompt}><Lightning weight="fill" aria-hidden="true" /><p><strong>Small decisions. Big improvement.</strong><span>Pick a move, learn why, then try another hand. No bets, no chips, just skill.</span></p></div>
+          <button type="button" className={styles.askDealerButton} onClick={() => { setCoachMode("chat"); setCoachOpen(true); }}><Sparkle weight="fill" aria-hidden="true" /> ASK THE DEALER</button>
           <small className={styles.sessionOnly}>Progress resets when this session ends.</small>
           <small className={styles.webflowCredit}>Built on Webflow Cloud. Independent 21 Lab project.</small>
         </aside>
@@ -513,6 +529,13 @@ export function PixelCasinoScreen() {
         focusWeakness={focusWeakness}
         onToggleFocusWeakness={() => setFocusWeakness((value) => !value)}
       />
+      {coachOpen && <CoachPanel
+        open={coachOpen}
+        mode={coachMode}
+        hand={coachHand}
+        template={feedback?.message ?? "The coach is unavailable right now. Keep playing and use the built-in strategy hints."}
+        onClose={() => setCoachOpen(false)}
+      />}
     </main>
   );
 }

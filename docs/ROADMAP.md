@@ -153,11 +153,12 @@ Goal: make 21 Lab feel like a web game, not a pretty page. Strategy grading stay
 - [x] Achievements/badges derived from persisted decisions (`deriveAchievements`, included in `GET /api/stats`, T2), shown in the Skill Map panel's badge grid, hidden with an "unavailable offline" note when falling back to session stats (T4)
 
 ### Phase 4 — AI Coach (Thu 24 PM) — the differentiator
-- [ ] Command Code client (OpenAI-compatible) using a secret env var
-- [ ] Tools: `get_optimal_action`, `simulate_ev`, `get_player_stats`
-- [ ] "Why?" after a mistake: a streamed explanation + an EV bar chart per action
-- [ ] "Ask the dealer" chat grounded in the player's stats and simulations
-- [ ] Rate limit via `coach_usage`; fall back gracefully to the template explanations
+**Current state (2026-09-24):** Code implemented in `odd/tasks/phase-4-ai-coach.md`; 505 tests, TypeScript, and lint pass. The local checkout has neither `COMMAND_CODE_API_KEY` nor `COMMAND_CODE_MODEL`, so real provider streaming and production activation remain unverified. Keep Phase 4 open until configuration and live smoke are complete.
+- [ ] Command Code client (OpenAI-compatible) using a secret env var — implemented, but secret/model not configured
+- [x] Tools: `get_optimal_action`, `simulate_ev`, `get_player_stats` (engine/stats-backed)
+- [ ] "Why?" after a mistake: a streamed explanation + an EV bar chart per action — UI/evidence implemented, real stream not yet verified
+- [ ] "Ask the dealer" chat grounded in the player's stats and simulations — UI/route implemented, real stream not yet verified
+- [x] Rate limit via `coach_usage`; fall back gracefully to the template explanations
 
 ### Phase 5 — Daily challenge & polish (Fri 25 AM)
 - [ ] Deterministic daily scenario set (date-seeded), results, and a simple leaderboard

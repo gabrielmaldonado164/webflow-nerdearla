@@ -164,6 +164,8 @@
 .feedbackText small { display: block; color: #ffc9b4; font-weight: 800; font-size: 10px; }
 .feedbackText span { display: inline-block; margin-top: 3px; color: var(--mint); font: 900 9px "Courier New", monospace; }
 .feedbackGood .feedbackText span { animation: badgePop .6s .2s steps(5, end) both; }
+.whyButton { display: block; margin-top: 9px; padding: 6px 9px; border: 2px solid #e8b994; background: #714638; color: #fff2dc; font: 900 10px "Courier New", monospace; cursor: pointer; }
+.whyButton:hover { background: #885446; }
 .nextButton { grid-column: 1 / -1; min-height: 39px; display: flex; justify-content: center; align-items: center; gap: 6px; padding: 5px 8px; border: 3px solid #d9edbb; border-bottom-width: 7px; clip-path: polygon(8px 0, calc(100% - 8px) 0, calc(100% - 8px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 8px) calc(100% - 4px), calc(100% - 8px) 100%, 8px 100%, 8px calc(100% - 4px), 0 calc(100% - 4px), 0 4px, 8px 4px); background: #78e5a9; color: #082617; font: 900 12px "Courier New", monospace; filter: drop-shadow(0 3px 0 #082013); animation: nextPulse 1.6s 2 alternate; }
 .nextButton svg { width: 16px; height: 16px; }
 .nextButton:hover { background: #9ff4be; }
@@ -190,6 +192,9 @@
 .panelPrompt p { margin: 0; }
 .panelPrompt strong { display: block; font: 900 12px "Courier New", monospace; }
 .panelPrompt span { display: block; margin-top: 5px; color: #d2dec9; font-size: 10px; line-height: 1.4; }
+.askDealerButton { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 42px; padding: 7px; border: 2px solid #e0c380; border-bottom-width: 5px; background: #574424; color: #fff3ca; font: 900 11px "Courier New", monospace; cursor: pointer; }
+.askDealerButton:hover { background: #6a5229; }
+.askDealerButton svg { width: 17px; height: 17px; }
 .sessionOnly { display: block; color: var(--muted); font-size: 10px; }
 .webflowCredit { display: block; margin-top: auto; padding-top: 8px; border-top: 1px solid #5a795e; color: #9eb7aa; font-size: 9px; }
 @media (min-width: 780px) {
