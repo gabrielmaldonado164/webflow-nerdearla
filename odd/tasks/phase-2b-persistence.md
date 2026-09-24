@@ -39,7 +39,7 @@ Progress is browser-session-only. Phase 3 (stats, skill map) and Phase 4 (AI coa
 ## Delivery
 - Strategy: `ask-on-risk`; reusing the owner's standing chain choice **feature-branch-chain** (from Phase 2c). One branch per task stacked on `feat/2c-t5-game-ui`: `feat/2b-t1-persistence-domain` → `feat/2b-t2-decisions-api` → `feat/2b-t3-client-wiring`.
 - Forecast: ~500–700 authored changed lines across T1–T3.
-- Last reviewed boundary: 2bc1c42 (Phase 2b T1–T3 lineage review-895a950917c8d853 approved + acknowledged; before: 1d402e7, Phase 2c T5-fix lineage review-9d053cdf12623359).
+- Last reviewed boundary: 5ca76cf (Phase 2b T4 lineage review-e4b5dcda3ea3a040 approved + acknowledged; before: 2bc1c42, Phase 2b T1–T3 lineage review-895a950917c8d853 approved + acknowledged; before: 1d402e7, Phase 2c T5-fix lineage review-9d053cdf12623359).
 
 ## Route per task
 | Task | Route | Trigger evidence |
@@ -106,6 +106,8 @@ T2's smoke test (above) already exercised `POST /api/decisions` directly via `cu
 - `MAX_PLAYER_CARDS = 21` in `decisionPayload.ts`: chosen as a generous DoS/degenerate-payload guard, independent of (and checked before, for cheapness) the `total >= 21` rule — the worst legitimate case (an all-Aces hand) still resolves at a total under 21 with up to 20 cards, so 21 never false-rejects a real hand while still bounding payload size before the per-card validation loop runs.
 - Re-verified against the actual `src/blackjack` source (not just the review's wording) that none of the three engine functions `recordDecision` calls (`availableActions`, `optimalAction`, `classifyScenario`) actually throw for a bust or oversized hand today — `hardAction`/`softAction` handle any total defensively (`total >= 17` / `total >= 19` fall through to `"S"`). The reported "can turn into a 500" was prospective/defense-in-depth (e.g. a future engine change, or a D1 column-size edge case), not a reproduced crash; `recordDecision`'s new `try/catch` and the parser guard are both still correct fixes for the underlying concern (an already-resolved hand isn't a real decision point and shouldn't reach the engine or the DB at all), and the added `vi.doMock` test proves the `try/catch` actually works when something *does* throw.
 - Row-mapping extraction only added `decisionRowToInsertValues`; `createD1DecisionRepository`/`ensurePlayer` themselves are unchanged (still a real D1 binding, so no fake-D1 integration test was added for them — only the pure mapping is unit-tested, per the task's explicit scope: "if you can extract the row→insert mapping as a pure function ... do that").
+
+- 2026-09-23: T4 review approved and acknowledged (lineage review-e4b5dcda3ea3a040, 24be285..5ca76cf, reliability lens). Non-blocking follow-ups: (WARNING) handler drops `setCookie` when `ensurePlayer` succeeds but `insertDecision` throws, so a new player gets an orphaned `players` row and a fresh id next time (regression vs. the old route; untested); (WARNING) `recordDecision` catch turns any engine exception, including real defects, into a 400 with no server log and echoes `error.message` to the client; (SUGGESTION) the env-restore regression test depends on the ambient `NEXT_PUBLIC_BASE_PATH` and test order.
 
 ## Next step
 Phase 3 — Stats & Skill Map (`docs/ROADMAP.md` Phase 3 checklist).
