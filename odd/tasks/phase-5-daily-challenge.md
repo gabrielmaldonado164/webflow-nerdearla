@@ -25,10 +25,12 @@ The first Phase 5 work unit gives every player the same ten strategy hands each 
 - `npx tsc --noEmit` and `npm run lint`: passed.
 - `npm run build`: passed with network access for the existing Geist font download.
 - SQLite migration applied with prior migrations by the backend work unit.
-- Local Cloudflare D1 smoke and visual/mobile browser QA remain open; Wrangler could not bind in the sandbox.
+- OpenNext bundle and local D1 migration passed. Local Cloudflare preview returned ten hands; a completed run saved and read back its engine-graded result (2/5, 40%).
+- The production-mode preview marks `lab_player` Secure, so HTTP localhost clients must explicitly resend the cookie for this smoke test. The public HTTPS site is unaffected.
+- Visual/mobile browser QA remains open; no browser was connected to the browser runtime.
 
 ## Remaining Phase 5 work
 
-- Validate the new API against a running Cloudflare D1 preview and inspect the panel at desktop and mobile widths.
+- Inspect the panel at desktop and mobile widths when a browser is available.
 - Polish loading/error/empty states across the existing coach and Skill Map as needed.
 - Deploy and smoke the public URL only after the owner approves the production mutation.

@@ -161,7 +161,7 @@ Goal: make 21 Lab feel like a web game, not a pretty page. Strategy grading stay
 - [x] Rate limit via `coach_usage`; fall back gracefully to the template explanations
 
 ### Phase 5 — Daily challenge & polish (Fri 25 AM)
-**Current state (2026-09-24):** Daily Challenge is implemented on `feat/5-daily-challenge` but not yet deployed. It uses ten fixed hands per UTC day, ends after three misses, persists one engine-graded result per player/day, and includes loading/error/result states. The leaderboard is intentionally deferred at the roadmap cut line. Visual/mobile QA and final production smoke remain open. See `odd/tasks/phase-5-daily-challenge.md`.
+**Current state (2026-09-24):** Daily Challenge is implemented on `feat/5-daily-challenge` but not yet deployed. It uses ten fixed hands per UTC day, ends after three misses, persists one engine-graded result per player/day, and includes loading/error/result states. Local Cloudflare D1 API smoke passed. The leaderboard is intentionally deferred at the roadmap cut line. Visual/mobile QA and final production smoke remain open. See `odd/tasks/phase-5-daily-challenge.md`.
 - [ ] Deterministic daily scenario set (date-seeded), results, and a simple leaderboard
 - [ ] Visual polish pass: selected 2.5D pixel-art casino language across game and surrounding UI
 - [ ] Mobile QA, loading and error states, empty states
