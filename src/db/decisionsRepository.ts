@@ -108,13 +108,22 @@ export function createD1DecisionRepository(db: Db): DecisionRepository {
  * order `computePlayerStats` (src/player/playerStats.ts) requires for
  * correct streak calculation. Returns an empty array for an unknown or
  * decision-less player id; never throws for that case.
+ *
+ * Ordered by `createdAt` then `id` ascending: `createdAt` alone is only
+ * millisecond-precision, so two decisions recorded in the same
+ * millisecond (realistic under rapid play) would otherwise come back in
+ * a DB-dependent, non-deterministic order. `id` is a UUID assigned per
+ * decision (see `recordDecision.ts`) with no relation to insertion
+ * order, so this is a stable tie-break, not a true chronological one —
+ * good enough to make the query deterministic without adding a
+ * sequence column.
  */
 export async function listPlayerDecisions(db: Db, playerId: string): Promise<DecisionRow[]> {
   const rows = await db
     .select()
     .from(decisions)
     .where(eq(decisions.playerId, playerId))
-    .orderBy(asc(decisions.createdAt));
+    .orderBy(asc(decisions.createdAt), asc(decisions.id));
 
   return rows.map(decisionRowFromSelectValues);
 }
