@@ -25,6 +25,10 @@ export interface DailyResult {
   durationMs: number;
 }
 
+export function dailyResultMisses(result: DailyResult): number {
+  return result.attempts - result.score;
+}
+
 /** Each hand has its own RNG stream so actions never alter later hands. */
 export function generateDailyScenarios(date: string): CanonicalDailyScenario[] {
   return Array.from({ length: DAILY_HAND_COUNT }, (_, index) =>

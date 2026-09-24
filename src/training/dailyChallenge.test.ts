@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DAILY_HAND_COUNT, evaluateDailyActions, generateDailyScenarios, gradeDailyResult, isSubmittableDailyDate, publicDailyScenario } from "./dailyChallenge";
+import { DAILY_HAND_COUNT, evaluateDailyActions, generateDailyScenarios, dailyResultMisses, gradeDailyResult, isSubmittableDailyDate, publicDailyScenario } from "./dailyChallenge";
 
 describe("daily challenge", () => {
   it("generates the same fixed set for a UTC date and a different set for another date", () => {
@@ -45,5 +45,12 @@ describe("daily challenge", () => {
     expect(isSubmittableDailyDate("2026-09-24", new Date("2026-09-25T00:15:00Z"))).toBe(false);
     expect(isSubmittableDailyDate("2026-09-26", new Date("2026-09-25T00:01:00Z"))).toBe(false);
     expect(isSubmittableDailyDate("2026-09-25", new Date("2026-09-25T23:59:59Z"))).toBe(true);
+  });
+});
+
+describe("dailyResultMisses", () => {
+  it("derives misses from a saved result so a reload shows the real count", () => {
+    expect(dailyResultMisses({ date: "2026-09-24", score: 3, attempts: 6, accuracy: 50, durationMs: 1 })).toBe(3);
+    expect(dailyResultMisses({ date: "2026-09-24", score: 10, attempts: 10, accuracy: 100, durationMs: 1 })).toBe(0);
   });
 });

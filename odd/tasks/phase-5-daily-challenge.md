@@ -27,10 +27,9 @@ The first Phase 5 work unit gives every player the same ten strategy hands each 
 - SQLite migration applied with prior migrations by the backend work unit.
 - OpenNext bundle and local D1 migration passed. Local Cloudflare preview returned ten hands; a completed run saved and read back its engine-graded result (2/5, 40%).
 - The production-mode preview marks `lab_player` Secure, so HTTP localhost clients must explicitly resend the cookie for this smoke test. The public HTTPS site is unaffected.
-- Visual/mobile browser QA remains open; no browser was connected to the browser runtime.
+- 2026-09-24 browser QA (Playwright, local Cloudflare preview): 390x844 and 1280x800 play, feedback, save, reload, Esc/focus return, and the `/api/daily` failure state all work with no horizontal scroll. Found and fixed: a reloaded saved result showed `0/3 MISSES`; it now derives misses from the saved result (`dailyResultMisses`, test-first) and the footer no longer promises in-progress state after completion. 519 tests, tsc, and lint pass.
 
 ## Remaining Phase 5 work
 
-- Inspect the panel at desktop and mobile widths when a browser is available.
 - Polish loading/error/empty states across the existing coach and Skill Map as needed.
 - Deploy and smoke the public URL only after the owner approves the production mutation.

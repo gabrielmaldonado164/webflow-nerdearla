@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Action, Card } from "@/blackjack";
 import { DEFAULT_RULES, explainDecision, optimalAction } from "@/blackjack";
-import { DAILY_HAND_COUNT, DAILY_MISS_LIMIT, evaluateDailyActions, type DailyResult } from "@/training/dailyChallenge";
+import { DAILY_HAND_COUNT, DAILY_MISS_LIMIT, dailyResultMisses, evaluateDailyActions, type DailyResult } from "@/training/dailyChallenge";
 import { fetchDailyChallenge, submitDailyChallenge, type DailyChallengeResponse } from "./dailyChallengeRequest";
 import styles from "./DailyChallengePanel.module.css";
 
@@ -140,7 +140,7 @@ export function DailyChallengePanel({ open, onClose }: DailyChallengePanelProps)
       {!challenge && loadError && <><p className={styles.error} role="alert">Today&apos;s challenge is unavailable. Practice mode still works.</p><button type="button" className={styles.primaryButton} onClick={() => { setLoadError(false); setRetryToken((token) => token + 1); }}>TRY AGAIN</button></>}
 
       {challenge && <>
-        <div className={styles.meta}><span>{challenge.date} UTC</span><span>{result ? "FINISHED" : `HAND ${Math.min(handIndex + 1, DAILY_HAND_COUNT)}/${DAILY_HAND_COUNT}`}</span><span>{progress?.misses ?? 0}/{DAILY_MISS_LIMIT} MISSES</span></div>
+        <div className={styles.meta}><span>{challenge.date} UTC</span><span>{result ? "FINISHED" : `HAND ${Math.min(handIndex + 1, DAILY_HAND_COUNT)}/${DAILY_HAND_COUNT}`}</span><span>{result ? dailyResultMisses(result) : progress?.misses ?? 0}/{DAILY_MISS_LIMIT} MISSES</span></div>
         <div className={styles.progressTrack} role="progressbar" aria-label="Daily challenge progress" aria-valuenow={result?.attempts ?? actions.length} aria-valuemin={0} aria-valuemax={DAILY_HAND_COUNT}><i style={{ width: `${((result?.attempts ?? actions.length) / DAILY_HAND_COUNT) * 100}%` }} /></div>
         {result ? <ResultSummary result={result} /> : scenario && <>
           <div className={styles.scenario}>
@@ -166,7 +166,9 @@ export function DailyChallengePanel({ open, onClose }: DailyChallengePanelProps)
           </div>}
         </>}
       </>}
-      <small className={styles.footer}>Closing this panel keeps your progress until you reload the page. Only the first completed result is recorded for each UTC day.</small>
+      <small className={styles.footer}>{result
+        ? "Your result for today is saved. Only the first completed result is recorded for each UTC day."
+        : "Closing this panel keeps your progress until you reload the page. Only the first completed result is recorded for each UTC day."}</small>
     </div>
   </div>;
 }
