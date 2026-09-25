@@ -169,7 +169,7 @@ Goal: make 21 Lab feel like a web game, not a pretty page. Strategy grading stay
 
 ### Phase 6 — Submit (Fri 25, before 15:00 ART; buffer until 18:00)
 - [ ] Submit the form: GitHub user, app URL, description
-- [ ] README with a pitch, architecture, and tech highlights
+- [x] README with a pitch, architecture, and tech highlights
 - [ ] **Feature freeze at 12:00 ART Friday.** After that, only fixes.
 
 ## 6. Cut Line (if time runs short)
@@ -217,3 +217,4 @@ Append one line per session: date, what was done, and what comes next.
 - 2026-09-24: Coach quota visibility shipped on `feat/5-daily-challenge` (owner decision): provider failures refund the question, `GET /api/coach/usage`, a visible `N/20 AI questions left today` counter, and a distinct daily-limit note. Native review approved; advisory findings fixed. 560 tests. Next: owner-approved production deploy + public smoke.
 - 2026-09-24: Owner approved production deploy. Deployed `feat/5-daily-challenge` commit `d7e8a78` to Webflow Cloud main (`af5b4a96-4738-4c5e-a96a-89a655ff7832`, success); restored `open-next.config.ts` after the CLI removed it. Public smoke: `/` 200; `/api/coach/usage` 200 `20/20` with no player cookie minted; `/api/daily` 200 with ten hands (migration 0003 live); a nine-hand run saved and read back engine-graded (6/9, 67%); malformed coach body 400; browser shows the coach counter and the Daily Challenge panel with no horizontal scroll. No paid provider calls. Next: Phase 6 (README, submission) and the pending review of `d7e8a78` in the next slice; push + PR remain owner-controlled.
 - 2026-09-24: Owner renamed the staging subdomain to `lab21`; redeployed `db6484b` with `--auto-publish` (`4a0d1d25-4846-4eb8-a8bd-00e7904c1348`, success). https://lab21.webflow.io/ serves the app (home, `/api/coach/usage`, `/api/daily`, `/api/stats` all 200; coach counter visible). The old URL returns 404. Use the new URL in the submission form.
+- 2026-09-24: README written (pitch, 30-second judge path, features, tech highlights, architecture diagram, stack, run/test/deploy, decisions) with two screenshots under docs/images; claims checked against code (`e84b876`). Next: push the branch chain + PRs (owner decision), then the submission form with https://lab21.webflow.io/.
