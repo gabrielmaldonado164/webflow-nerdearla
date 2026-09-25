@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
-import type { Action, Card, Scenario } from "@/blackjack";
+import type { Action, Card, CategoryWeights, Scenario } from "@/blackjack";
 import { DEFAULT_RULES, createRng, dealHoleCard, drawCard, generateScenario } from "@/blackjack";
 import type { RunState } from "@/training/run";
 
@@ -36,6 +36,13 @@ export interface UsePracticeSessionOptions {
   seed?: number;
   /** Initial best score (e.g. loaded from storage in a later phase). */
   bestScore?: number;
+  /**
+   * Initial category weights biasing scenario generation (Phase 3 T3,
+   * adaptive practice — e.g. `weightsFromStats`). `undefined` (the
+   * default) uses the engine's default uniform weighting. Read once at
+   * mount; use the returned `setWeights` to change it afterward.
+   */
+  weights?: CategoryWeights;
 }
 
 export interface UsePracticeSession {
@@ -66,6 +73,14 @@ export interface UsePracticeSession {
    * agree, exactly like the first dealt hand.
    */
   setBestScore: (score: number) => void;
+  /**
+   * Overrides the category weights used for future deals (T4's
+   * "Practice weakness" toggle plugs in here). Takes effect starting
+   * with the next `next()`/`restart()` call; the hand already on
+   * screen is unaffected. Pass `undefined` to go back to the engine's
+   * default uniform weighting.
+   */
+  setWeights: (weights: CategoryWeights | undefined) => void;
 }
 
 function randomSeed(): number {
@@ -75,11 +90,16 @@ function randomSeed(): number {
 export function usePracticeSession(
   options: UsePracticeSessionOptions = {},
 ): UsePracticeSession {
-  const { onDecision, seed, bestScore } = options;
+  const { onDecision, seed, bestScore, weights } = options;
   // `createRng` returns a stateful closure (mulberry32): calling it mutates
   // its own internal state, not React state, so a plain ref is enough to
   // keep the same generator identity across renders once it exists.
   const rngRef = useRef<(() => number) | null>(null);
+  // Read once at mount (like `seed`/`bestScore`) and otherwise only
+  // changed imperatively via `setWeights`: a plain ref, not state, since
+  // changing it must never itself trigger a re-render or re-deal — it
+  // only affects the *next* scenario generation call.
+  const weightsRef = useRef<CategoryWeights | undefined>(weights);
 
   const [state, dispatch] = useReducer(
     sessionReducer,
@@ -117,7 +137,7 @@ export function usePracticeSession(
     // hydration is done.
     const rng = createRng(seed ?? randomSeed());
     rngRef.current = rng;
-    const dealt = dealNextHandIfAllowed(stateRef.current, rng, DEFAULT_RULES);
+    const dealt = dealNextHandIfAllowed(stateRef.current, rng, DEFAULT_RULES, weightsRef.current);
     if (!dealt) return; // Unreachable on a fresh session; canDeal is always true here.
     dispatchAndSync({ type: "deal", scenario: dealt.scenario, holeCard: dealt.holeCard });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,7 +180,7 @@ export function usePracticeSession(
     // Gated on `canDeal` (via `dealNextHandIfAllowed`) before drawing: a
     // `next()` call once the run is over must not consume the rng either,
     // since the reducer would drop the dealt hand anyway.
-    const dealt = dealNextHandIfAllowed(stateRef.current, rng, DEFAULT_RULES);
+    const dealt = dealNextHandIfAllowed(stateRef.current, rng, DEFAULT_RULES, weightsRef.current);
     if (!dealt) return; // Ignored: the run is over.
     dispatchAndSync({ type: "deal", scenario: dealt.scenario, holeCard: dealt.holeCard });
   }, [dispatchAndSync]);
@@ -168,7 +188,7 @@ export function usePracticeSession(
   const restart = useCallback(() => {
     const rng = rngRef.current;
     if (!rng) return;
-    const scenario = generateScenario(rng, DEFAULT_RULES);
+    const scenario = generateScenario(rng, DEFAULT_RULES, { weights: weightsRef.current });
     const holeCard = dealHoleCard(scenario.dealerUpcard, () => drawCard(rng));
     dispatchAndSync({ type: "restart", scenario, holeCard });
   }, [dispatchAndSync]);
@@ -179,6 +199,10 @@ export function usePracticeSession(
     },
     [dispatchAndSync],
   );
+
+  const setWeights = useCallback((next: CategoryWeights | undefined) => {
+    weightsRef.current = next;
+  }, []);
 
   const stats = useMemo(() => computeSessionStats(state.decisions), [state.decisions]);
 
@@ -195,5 +219,6 @@ export function usePracticeSession(
     next,
     restart,
     setBestScore,
+    setWeights,
   };
 }
