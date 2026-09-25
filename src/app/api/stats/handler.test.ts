@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DecisionRow } from "@/player/recordDecision";
 import { computePlayerStats } from "@/player/playerStats";
+import { deriveAchievements } from "@/player/achievements";
 
 import type { StatsHandlerDeps, StatsHandlerRepo } from "./handler";
 import { handleStatsRequest } from "./handler";
@@ -53,7 +54,7 @@ describe("handleStatsRequest", () => {
     const result = await handleStatsRequest(deps);
 
     expect(result.status).toBe(200);
-    expect(result.body).toEqual({ stats: computePlayerStats([]) });
+    expect(result.body).toEqual({ stats: computePlayerStats([]), achievements: deriveAchievements([]) });
     expect(repo.listPlayerDecisionsCalls).toHaveLength(0);
   });
 
@@ -64,7 +65,7 @@ describe("handleStatsRequest", () => {
     const result = await handleStatsRequest(deps);
 
     expect(result.status).toBe(200);
-    expect(result.body).toEqual({ stats: computePlayerStats([]) });
+    expect(result.body).toEqual({ stats: computePlayerStats([]), achievements: deriveAchievements([]) });
     expect(repo.listPlayerDecisionsCalls).toHaveLength(0);
   });
 
@@ -76,8 +77,9 @@ describe("handleStatsRequest", () => {
     expect(result).not.toHaveProperty("setCookie");
   });
 
-  it("returns computed stats for a valid cookie, querying the repo for that exact player id", async () => {
-    const repo = fakeRepo([SAMPLE_DECISION, { ...SAMPLE_DECISION, id: "other-id", isCorrect: false }]);
+  it("returns computed stats and achievements for a valid cookie, querying the repo for that exact player id", async () => {
+    const decisions = [SAMPLE_DECISION, { ...SAMPLE_DECISION, id: "other-id", isCorrect: false }];
+    const repo = fakeRepo(decisions);
     const deps = baseDeps({ readCookie: () => VALID_PLAYER_ID, repo });
 
     const result = await handleStatsRequest(deps);
@@ -85,17 +87,18 @@ describe("handleStatsRequest", () => {
     expect(result.status).toBe(200);
     expect(repo.listPlayerDecisionsCalls).toEqual([VALID_PLAYER_ID]);
     expect(result.body).toEqual({
-      stats: computePlayerStats([SAMPLE_DECISION, { ...SAMPLE_DECISION, id: "other-id", isCorrect: false }]),
+      stats: computePlayerStats(decisions),
+      achievements: deriveAchievements(decisions),
     });
   });
 
-  it("returns 200 with empty-history stats for a valid cookie with no persisted decisions", async () => {
+  it("returns 200 with empty-history stats and achievements for a valid cookie with no persisted decisions", async () => {
     const deps = baseDeps({ readCookie: () => VALID_PLAYER_ID, repo: fakeRepo([]) });
 
     const result = await handleStatsRequest(deps);
 
     expect(result.status).toBe(200);
-    expect(result.body).toEqual({ stats: computePlayerStats([]) });
+    expect(result.body).toEqual({ stats: computePlayerStats([]), achievements: deriveAchievements([]) });
   });
 
   it("returns 500 with a generic body, no stack, and logs when the repo throws", async () => {
