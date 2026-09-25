@@ -162,15 +162,15 @@ Goal: make 21 Lab feel like a web game, not a pretty page. Strategy grading stay
 
 ### Phase 5 — Daily challenge & polish (Fri 25 AM)
 **Current state (2026-09-24):** Daily Challenge is implemented on `feat/5-daily-challenge` but not yet deployed. It uses ten fixed hands per UTC day, ends after three misses, persists one engine-graded result per player/day, and includes loading/error/result states. Local Cloudflare D1 API smoke passed. The leaderboard is intentionally deferred at the roadmap cut line. Visual/mobile QA and final production smoke remain open. See `odd/tasks/phase-5-daily-challenge.md`.
-- [ ] Deterministic daily scenario set (date-seeded), results, and a simple leaderboard
+- [x] Deterministic daily scenario set (date-seeded) and results; leaderboard deferred by owner decision (anonymous cookies cannot enforce one entry per person)
 - [ ] Visual polish pass: selected 2.5D pixel-art casino language across game and surrounding UI
 - [x] Mobile QA, loading and error states, empty states
 - [x] Final production deploy + smoke test on the public URL
 
 ### Phase 6 — Submit (Fri 25, before 15:00 ART; buffer until 18:00)
-- [ ] Submit the form: GitHub user, app URL, description
+- [x] Submit the form: GitHub user, app URL, description (submitted 2026-09-25)
 - [x] README with a pitch, architecture, and tech highlights
-- [ ] **Feature freeze at 12:00 ART Friday.** After that, only fixes.
+- [x] **Feature freeze at 12:00 ART Friday.** After that, only fixes.
 
 ## 6. Cut Line (if time runs short)
 
@@ -223,3 +223,4 @@ Append one line per session: date, what was done, and what comes next.
 - 2026-09-24: Explained the 1/3 hard/soft/pair deal mix in the UI and README (`33d2b0a`; 100k-hand simulation: Aces ~18% of player cards vs ~8% in a real deck, ten-values match). Fixed a reduced-motion hydration mismatch on dealt cards and the action bar: constant initial pose via `cardDealMotion` + CSS pinning at rest (`fb671ab`, test-first). Reviews `review-34f03fcb391a23b2` and `review-ce7d9ec97a952c11` approved and acknowledged (advisory only). Deployed `fb671ab` with `--auto-publish` (`c382a543-2998-428e-9567-2827ac552e63`); live: new copy served, no console errors, no-JS reduced-motion cards render at rest. Tests 567/567.
 - 2026-09-25: Hole-card reveal re-played the deal from the shoe (swapping to `HoleCard` remounted both faces; measured +125px during the flip). Faces now start at rest via `cardDealMotion(..., { alreadyDealt: true })` (`c46f6ca`, test-first; 568/568). Review `review-b8e85decd05885ee` approved and acknowledged (suggestions only). Deployed with `--auto-publish` (`357025ef-a80f-4dcd-9be2-24b12032d286`); live: flip in place (0px face offset), `/api/decisions` 201, no console errors.
 - 2026-09-25: Pushed the full chain and opened PRs (feature-branch-chain): draft tracker #1 `feat/21-lab` → `main` (empty tracker commit), children #2–#16 each targeting its parent branch; bodies carry Chain Context and the diagram. 11 of 15 slices exceed 400 changed lines; bodies request `size:exception` (already reviewed per work unit). Merge order: #2…#16 into the tracker, then #1 into `main` (owner decision).
+- 2026-09-25: Merged PRs #2–#16 into the tracker and #1 into `main` (`4221a0e`). Owner submitted the challenge form (GitHub `gabrielmaldonado164`, https://lab21.webflow.io/, short description). Phase 6 complete; only fixes from here.
