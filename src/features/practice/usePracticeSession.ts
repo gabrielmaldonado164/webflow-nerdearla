@@ -16,8 +16,8 @@ import type { Action, Card, Scenario } from "@/blackjack";
 import { DEFAULT_RULES, createRng, dealHoleCard, drawCard, generateScenario } from "@/blackjack";
 import type { RunState } from "@/training/run";
 
+import { decideAndEmit } from "./decideAndEmit";
 import {
-  applyDecision,
   createInitialSessionState,
   sessionReducer,
   type SessionEvent,
@@ -58,6 +58,14 @@ export interface UsePracticeSession {
   next: () => void;
   /** Starts a fresh run (lives/score/streak), dealing a new hand. */
   restart: () => void;
+  /**
+   * Raises (never lowers) the run's bestScore. Meant to be called once
+   * from an effect after mount (e.g. with a value loaded from storage),
+   * never during render: the session always starts at the `bestScore`
+   * option's value (0 by default) so the server and first client render
+   * agree, exactly like the first dealt hand.
+   */
+  setBestScore: (score: number) => void;
 }
 
 function randomSeed(): number {
@@ -134,11 +142,11 @@ export function usePracticeSession(
         decidedAt: new Date().toISOString(),
       };
 
-      // Computed directly via `applyDecision` (rather than reading
+      // Computed directly via `decideAndEmit` (rather than reading
       // `dispatchAndSync`'s returned state back) so `onDecision` fires
       // with the exact record this call produced, never a stale or
       // mismatched one from the tail of `decisions`.
-      const { record } = applyDecision(stateRef.current, event);
+      const { record } = decideAndEmit(stateRef.current, event);
       dispatchAndSync(event);
       if (record) onDecision?.(record);
     },
@@ -165,6 +173,13 @@ export function usePracticeSession(
     dispatchAndSync({ type: "restart", scenario, holeCard });
   }, [dispatchAndSync]);
 
+  const setBestScore = useCallback(
+    (score: number) => {
+      dispatchAndSync({ type: "setBestScore", bestScore: score });
+    },
+    [dispatchAndSync],
+  );
+
   const stats = useMemo(() => computeSessionStats(state.decisions), [state.decisions]);
 
   return {
@@ -179,5 +194,6 @@ export function usePracticeSession(
     choose,
     next,
     restart,
+    setBestScore,
   };
 }

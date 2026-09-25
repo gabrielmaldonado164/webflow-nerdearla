@@ -122,7 +122,7 @@ Deliver in order. The app must stay deployable after every phase.
 - Non-blocking review follow-ups (fold into Phase 2c): renderHook tests for `usePracticeSession` (single decision while feedback is pending, one `onDecision` call per decision); tests for the screen's decision timer and keyboard gating; export the XP award constants from `progress.ts` instead of repeating them in the screen; make the explain sweep test assert that the message family matches `optimalAction`.
 - Next steps, in order:
   1. Owner accepted Pixel Arcade visuals (2026-09-23). Phase 2c is tracked in `odd/tasks/phase-2c-game-layer.md`.
-  2. Phase 2c: game layer (sound, run mode, combo, mistake juice, dealer hole-card flip and hand resolution) + review follow-ups.
+  2. Phase 2c: implemented; finish owner visual acceptance + T5 review (see the Phase 2c section).
   3. Phase 2b: anonymous player cookie + persist decisions to D1 via the `onDecision` seam.
   4. Preserve the shared decision engine; do not fork strategy rules in the UI.
 - Competitive landscape (researched): Veintiuno, Blackjack 21 Strategy Trainer, Blackjack Trainer 101, Blackjack Ace, basicstrategy.app, learn-blackjack.com, plus casino-affiliate simulators. Our differentiators: AI coach grounded in the deterministic engine + Monte Carlo EV, gamification, adaptive training, zero-friction web, product-grade design.
@@ -133,13 +133,17 @@ Deliver in order. The app must stay deployable after every phase.
 - [x] Card deal animations and feedback microinteractions (staggered deal, action response, split separation, outcome burst and coach reaction; owner accepted 2026-09-23)
 
 ### Phase 2c — Game layer (after the Phase 2a commit, before 2b persistence)
-Goal: make 21 Lab feel like a web game, not a pretty page. Strategy grading stays in the deterministic engine; game rules are pure TypeScript in `src/training` (or `src/blackjack` for dealer play), developed test-first.
-- [ ] 8-bit sound effects synthesized with the Web Audio API (deal, card flip, correct, mistake, combo, game over); no audio files; mute toggle remembered per browser; respects no sound before the first user interaction
-- [ ] Run mode: 3 lives, each wrong decision costs one; game over screen with score and local best score; restart
-- [ ] Combo multiplier (x2, x3… from the current streak) applied to score/XP
-- [ ] Mistake juice: screen shake and `navigator.vibrate` on wrong decisions (respect `prefers-reduced-motion`; no-op where unsupported)
-- [ ] Dealer hole card: deal a real hidden card and reveal it with a flip animation after the decision
-- [ ] Hand resolution: play the hand out (player action result, dealer draws per S17), show win/lose/push; grading still judges the decision, not the outcome
+Goal: make 21 Lab feel like a web game, not a pretty page. Strategy grading stays in the deterministic engine. Detailed tasks, commits, and review history: `odd/tasks/phase-2c-game-layer.md`.
+**Current state (2026-09-23):** T1–T5 implemented and committed on a stacked branch chain (not pushed): `feat/phase-2a-pixel-arcade` → `feat/2c-t1-hand-resolution` → `feat/2c-t2-run-mode` → `feat/2c-t3-session-reducer` → `feat/2c-t4-sound` → `feat/2c-t5-game-ui` (HEAD). T1–T4 reviewed and acknowledged; **T5 review pending** (base `10410bb`). 320 tests, tsc, lint, build clean.
+- [x] 8-bit sound effects synthesized with the Web Audio API, mute toggle remembered per browser, no sound before the first interaction
+- [x] Run mode: 3 lives, game over screen with score, best score, accuracy, restart
+- [x] Combo multiplier (x2/x3/x4 at streak 3/6/9)
+- [x] Mistake juice: screen shake and `navigator.vibrate`, respecting `prefers-reduced-motion`
+- [x] Dealer hole card: real hidden card (peek-safe) revealed with a flip animation
+- [x] Hand resolution: player action + basic-strategy auto-play, S17 dealer, win/lose/push/blackjack; grading still judges the decision
+- [x] Coach: pixel-art croupier drawn as SVG (replaces the web-builder coach, owner request)
+- [ ] Owner visual acceptance of the croupier + fixes (open nits: the Ace in the croupier's hand is not legible at small size; show a "BUST" label when the dealer busts)
+- [ ] T5 native review (run `gentle-ai review assess --base-ref 10410bb --committed-only` on `feat/2c-t5-game-ui`)
 
 ### Phase 3 — Stats & Skill Map (Thu 24 PM)
 - [ ] Stats API: totals, accuracy, current and best streak, strongest and weakest category
@@ -195,3 +199,5 @@ Append one line per session: date, what was done, and what comes next.
 - 2026-09-23: Owner wants a web game, not just a polished page. Added Phase 2c (Web Audio SFX, run mode with lives, combo multiplier, mistake shake/vibration, dealer hole-card flip and full hand resolution) before 2b persistence; achievements added to Phase 3. Supersedes the earlier deferral of hand resolution.
 - 2026-09-23: Phase 2a committed on `feat/phase-2a-pixel-arcade` (5 commits, 149 tests, lint/tsc/build clean); native review approved with 4 non-blocking coverage findings recorded as Phase 2c follow-ups. Deleted rejected mockups and dead UI. Next: owner visual acceptance, then Phase 2c.
 - 2026-09-23: Owner accepted Pixel Arcade visuals. Phase 2c started (feature document `odd/tasks/phase-2c-game-layer.md`, feature-branch PR chain on top of `feat/phase-2a-pixel-arcade`).
+- 2026-09-23: Session end. Phase 2c T1–T5 implemented on the stacked branch chain ending at `feat/2c-t5-game-ui` (320 tests, tsc/lint/build clean). T1–T4 reviewed; T5 review and owner acceptance of the new pixel-art croupier pending. Next: croupier/BUST nits if the owner wants them, T5 review, push + PRs in chain order (owner decision), then Phase 2b persistence.
+- 2026-09-23: Session end. Removed the rejected hand-drawn croupier (owner will supply a Codex-generated PNG matching the old robot), added running hand totals with a BUST label, and froze the table flow on game over (317 tests, tsc/lint/build clean). Next: T5 native review from base 10410bb (owner consent pending), integrate the croupier PNG when provided, then Phase 2b persistence.

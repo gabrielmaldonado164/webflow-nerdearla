@@ -258,6 +258,32 @@ describe("sessionReducer restart", () => {
   });
 });
 
+describe("sessionReducer setBestScore", () => {
+  it("raises the run's bestScore to the given value", () => {
+    const state = createInitialSessionState(0);
+    const next = sessionReducer(state, { type: "setBestScore", bestScore: 1500 });
+    expect(next.run.bestScore).toBe(1500);
+  });
+
+  it("never lowers the run's bestScore (keeps the higher of the two)", () => {
+    const state = createInitialSessionState(2000);
+    const next = sessionReducer(state, { type: "setBestScore", bestScore: 500 });
+    expect(next.run.bestScore).toBe(2000);
+  });
+
+  it("leaves the rest of the state untouched", () => {
+    let state = createInitialSessionState(0);
+    state = sessionReducer(state, { type: "deal", scenario: buildScenario(), holeCard: HOLE_CARD });
+
+    const next = sessionReducer(state, { type: "setBestScore", bestScore: 900 });
+
+    expect(next.scenario).toBe(state.scenario);
+    expect(next.holeCard).toBe(state.holeCard);
+    expect(next.feedback).toBe(state.feedback);
+    expect(next.decisions).toBe(state.decisions);
+  });
+});
+
 describe("canDecide", () => {
   it("is false with no scenario dealt yet", () => {
     expect(canDecide(createInitialSessionState(), "hit")).toBe(false);

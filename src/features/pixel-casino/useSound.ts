@@ -8,6 +8,7 @@
 
 import { useCallback, useRef, useSyncExternalStore } from "react";
 
+import { createMutedStore } from "./mutedStore";
 import { DEFAULT_MUTED, loadMuted, saveMuted } from "./preferences";
 import { createSoundPlayer, type CueNotesOptions, type SoundCue, type SoundPlayer } from "./sound";
 
@@ -24,19 +25,20 @@ export interface UseSound {
 // the server and first client render agree — no hydration mismatch from a
 // player who has muted before), and every mounted `useSound()` re-renders
 // together when `toggleMuted` changes it.
-const mutedListeners = new Set<() => void>();
+//
+// The in-memory `mutedStore` (not `loadMuted()`/`saveMuted()` directly) is
+// the source of truth for the snapshot: `saveMuted` is a guarded no-op when
+// `localStorage` is unavailable or throws, so reading `loadMuted()` back
+// right after a toggle used to silently undo it on those browsers (see
+// `mutedStore.ts`).
+const mutedStore = createMutedStore({ load: loadMuted, save: saveMuted });
 
 function subscribeToMuted(onStoreChange: () => void): () => void {
-  mutedListeners.add(onStoreChange);
-  return () => mutedListeners.delete(onStoreChange);
-}
-
-function notifyMutedListeners(): void {
-  for (const listener of mutedListeners) listener();
+  return mutedStore.subscribe(onStoreChange);
 }
 
 function getMutedSnapshot(): boolean {
-  return loadMuted();
+  return mutedStore.getMuted();
 }
 
 function getMutedServerSnapshot(): boolean {
@@ -51,8 +53,7 @@ export function useSound(): UseSound {
   const playerRef = useRef<SoundPlayer | null>(null);
 
   const toggleMuted = useCallback(() => {
-    saveMuted(!loadMuted());
-    notifyMutedListeners();
+    mutedStore.toggle();
   }, []);
 
   const play = useCallback(
