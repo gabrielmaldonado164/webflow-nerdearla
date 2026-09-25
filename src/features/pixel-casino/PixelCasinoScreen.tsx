@@ -519,7 +519,7 @@ export function PixelCasinoScreen() {
             const skill = stats.categoryStats[category];
             return <div className={styles.skillRow} key={category}><span>{CATEGORY_LABEL[category]}</span><div className={styles.skillTrack}><i style={{ width: `${skill.accuracy ?? 0}%` }} /></div><b>{skill.accuracy === null ? "--" : `${skill.accuracy}%`}</b></div>;
           })}
-          <div className={styles.panelPrompt}><Lightning weight="fill" aria-hidden="true" /><p><strong>Small decisions. Big improvement.</strong><span>Pick a move, learn why, then try another hand. No bets, no chips, just skill.</span></p></div>
+          <div className={styles.panelPrompt}><Lightning weight="fill" aria-hidden="true" /><p><strong>Small decisions. Big improvement.</strong><span>Pick a move, learn why, then try another hand. No bets, no chips, just skill.</span><span>Soft hands and pairs come up more often than in a real deck, so you practice the tricky spots.</span></p></div>
           <button type="button" className={styles.askDealerButton} onClick={() => { setCoachMode("chat"); setCoachOpen(true); }}><Sparkle weight="fill" aria-hidden="true" /> ASK THE DEALER</button>
           <small className={styles.sessionOnly}>Progress resets when this session ends.</small>
           <small className={styles.webflowCredit}>Built on Webflow Cloud. Independent 21 Lab project.</small>

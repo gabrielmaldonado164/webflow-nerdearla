@@ -146,6 +146,7 @@ npx @webflow/webflow-cli apps deploy --no-input --site-id <site-id> --mount / --
 | Per-player daily coach rate limit | The provider key is paid by the author |
 | App must work fully without the AI | The AI is an enhancement, not the core |
 | Opens directly into a playable hand, no landing page | "The game is the onboarding" |
+| Hands dealt as 1/3 hard, 1/3 soft, 1/3 pairs (not a real deck) | Soft hands and pairs are where players make the most mistakes but are rare in a real shoe. Every soft hand holds an Ace, so Aces show up about twice as often (~18% of player cards vs ~8%); ten-value cards match a real deck (~30%). "Focus weakness" skews the mix further toward your weakest category |
 
 **Leaderboard intentionally deferred.** Anonymous, cookie-based identities can't enforce one entry per person, so a leaderboard would be trivially gameable; it was cut rather than shipped as something misleading.
 
