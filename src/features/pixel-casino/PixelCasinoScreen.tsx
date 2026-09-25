@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Action, Card, ScenarioCategory, Suit } from "@/blackjack";
 import { handValue, rankValue } from "@/blackjack";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
+import { keyToCommand } from "./keyboard";
 import { CORRECT_DECISION_XP, getArcadeProgress, INCORRECT_DECISION_XP } from "./progress";
 import styles from "./PixelCasinoScreen.module.css";
 
@@ -71,7 +72,7 @@ function GameCard({ card, faceDown = false, dealIndex }: GameCardProps) {
 }
 
 export function PixelCasinoScreen() {
-  const { scenario, feedback, decisions, stats, choose, next } = usePracticeSession();
+  const { scenario, feedback, decisions, stats, run, choose, next, restart } = usePracticeSession();
   const [showClue, setShowClue] = useState(false);
   const [pendingAction, setPendingAction] = useState<Action | null>(null);
   const [handSequence, setHandSequence] = useState(0);
@@ -104,22 +105,25 @@ export function PixelCasinoScreen() {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
       if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
-      if (feedback) {
-        if (event.key === "Enter" && !(event.target instanceof HTMLButtonElement)) {
-          event.preventDefault();
-          nextHand();
-        }
-        return;
-      }
-      const action = ACTIONS.find(({ key }) => key.toLowerCase() === event.key.toLowerCase());
-      if (action) {
-        event.preventDefault();
-        chooseAction(action.id);
-      }
+      // Enter also activates a focused button (e.g. "Deal next hand"); let
+      // the button's own click handler run instead of double-firing here.
+      if (event.key === "Enter" && event.target instanceof HTMLButtonElement) return;
+
+      const command = keyToCommand(event.key, {
+        hasFeedback: Boolean(feedback),
+        availableActions: scenario?.availableActions ?? [],
+        isGameOver: run.status === "over",
+      });
+      if (!command) return;
+
+      event.preventDefault();
+      if (command.type === "choose") chooseAction(command.action);
+      else if (command.type === "next") nextHand();
+      else restart();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [feedback, chooseAction, nextHand]);
+  }, [feedback, scenario, run.status, chooseAction, nextHand, restart]);
 
   const total = scenario ? handValue(scenario.playerCards).total : null;
   const handNumber = stats.handsPlayed + (feedback ? 0 : 1);

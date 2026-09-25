@@ -27,14 +27,14 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 ## Tasks
 - [x] T1 — Engine: hand resolution in `src/blackjack/resolve.ts`. Deal a real hole card from a seeded RNG; play out the player's chosen action (hit/stand/double; split plays each hand by basic strategy); dealer draws to 17 and stands on soft 17 per `GameRules`; outcome per hand: win / lose / push / blackjack. Plus review follow-up: explain sweep test asserts the message family matches `optimalAction`.
 - [x] T2 — Training: run mode in `src/training/run.ts`. Pure reducer: 3 lives, a wrong decision costs one, score with combo multiplier (x1, x2 at streak 3, x3 at streak 6…), game over, restart, best score. Plus review follow-up: export XP award constants from `progress.ts` and use them in the screen.
-- [ ] T3 — Session: extract a pure practice-session reducer from `usePracticeSession` (single decision while feedback is pending, one `onDecision` per decision, next clears feedback) with tests; wire the hole card, resolution, and run state through it. Pure `keyToCommand` mapping with tests (review follow-up).
+- [x] T3 — Session: extract a pure practice-session reducer from `usePracticeSession` (single decision while feedback is pending, one `onDecision` per decision, next clears feedback) with tests; wire the hole card, resolution, and run state through it. Pure `keyToCommand` mapping with tests (review follow-up).
 - [ ] T4 — Sound: `src/features/pixel-casino/sound.ts` Web Audio synth (deal, flip, correct, mistake, combo, game over), lazy AudioContext on first interaction, mute persisted with guarded `localStorage`; pure parts tested.
 - [ ] T5 — UI: hole-card flip, dealer draws, outcome banner, lives/score/combo HUD, game over + restart screen, shake + `navigator.vibrate` on mistakes, mute toggle, sound calls. Mobile and desktop QA via screenshots.
 
 ## Delivery
 - Strategy: `ask-on-risk` → owner chose **feature-branch-chain** (2026-09-23). One branch per task, stacked: `feat/phase-2a-pixel-arcade` → `feat/2c-t1-hand-resolution` → `feat/2c-t2-run-mode` → `feat/2c-t3-session-reducer` → `feat/2c-t4-sound` → `feat/2c-t5-game-ui`. Each PR targets the previous branch; merge in order.
 - Forecast: ~1200–1600 authored changed lines across T1–T5.
-- Last reviewed boundary: 785ce19 (T1-fix + T2 review lineage review-d032dc5df892a740 approved + acknowledged; earlier T1 lineage review-7659ea5ddda7d84c).
+- Last reviewed boundary: f04a04a (T3 lineage review-5fdae880c51aa8be approved + acknowledged; earlier: review-d032dc5df892a740, review-7659ea5ddda7d84c).
 
 ## Route per task
 | Task | Route | Trigger evidence |
@@ -48,6 +48,10 @@ The owner accepted the Pixel Arcade visuals (2026-09-23) but the experience is s
 - 2026-09-23: T1 follow-ups done on `feat/2c-t1-hand-resolution` (16eb4d8): explicit action switch that throws on unexpected actions (optimalAction never returns split after a split, pinned by test), H17 and unrestricted split-aces tests, bounded hole-card redraw (RED observed as a hang). Pinned-branch tests passed on first run (no RED, existing behavior).
 - 2026-09-23: T2 done on `feat/2c-t2-run-mode`: 580eb5a `src/training/run.ts` (3 lives, BASE_POINTS 100, multiplier x2/x3/x4 at streak 3/6/9, game over, restart keeps bestScore; bestScore updates on game over), ab5f307 shared XP constants. RED/GREEN observed; 179 tests, tsc, lint clean. Assess from 6df07eb: medium, review due (434 lines).
 - 2026-09-23: T1-fix + T2 review approved. Follow-ups: restart mid-run dropped the live score from bestScore — decided (parent, owner may override) that an abandoned run still counts, so restart folds `max(bestScore, score)`; add a test that game over keeps a higher stored best. Both folded into T3.
+- 2026-09-23: T2 follow-up on `feat/2c-t2-run-mode` (f002e36): restart keeps max(best, score); game-over keeps a higher stored best. RED/GREEN observed.
+- 2026-09-23: T3 done on `feat/2c-t3-session-reducer`: 0feb21d pure `sessionReducer` + `applyDecision` (deal/decide/restart; decide ignored when pending, over, or unavailable; one record per accepted decision); b254869 `keyToCommand`; 0950a79 `usePracticeSession` on `useReducer` with a synced ref so `onDecision` fires once per accepted decision, exposes holeCard, run, feedback.resolution, restart. RED/GREEN observed; 217 tests, tsc, lint, build clean.
+
+- 2026-09-23: T3 review approved. Follow-ups (fold into T4 start): `choose`/`next` consume the seeded RNG before the accept/ignore gate, breaking seeded determinism — gate on pending/over/available before drawing and add a seeded-determinism test; hook-level once-semantics stay unproved without a DOM test harness (accepted: logic lives in the tested pure `applyDecision`; keep `choose` using one sync path).
 
 ## Next step
-T3 on `feat/2c-t3-session-reducer` (after the T1-fix + T2 review).
+T4 on `feat/2c-t4-sound` (T3 review done). Known interim gap: after 3 mistakes the run is over and choices are ignored, but the game-over screen only arrives in T5 (keyboard Enter/R restarts meanwhile).
