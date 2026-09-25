@@ -17,6 +17,7 @@ import { DEFAULT_RULES, createRng, dealHoleCard, drawCard, generateScenario } fr
 import type { RunState } from "@/training/run";
 
 import {
+  applyDecision,
   createInitialSessionState,
   sessionReducer,
   type SessionEvent,
@@ -133,8 +134,13 @@ export function usePracticeSession(
         decidedAt: new Date().toISOString(),
       };
 
-      const nextState = dispatchAndSync(event);
-      onDecision?.(nextState.decisions[nextState.decisions.length - 1]);
+      // Computed directly via `applyDecision` (rather than reading
+      // `dispatchAndSync`'s returned state back) so `onDecision` fires
+      // with the exact record this call produced, never a stale or
+      // mismatched one from the tail of `decisions`.
+      const { record } = applyDecision(stateRef.current, event);
+      dispatchAndSync(event);
+      if (record) onDecision?.(record);
     },
     [onDecision, dispatchAndSync],
   );

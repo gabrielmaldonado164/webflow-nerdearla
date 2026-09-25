@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_RULES, createRng } from "@/blackjack";
-import type { Card, Scenario } from "@/blackjack";
+import type { Action, Card, Scenario } from "@/blackjack";
 
 import { dealNextHandIfAllowed, resolveActionIfAllowed } from "./sessionRng";
 import { createInitialSessionState, sessionReducer, type SessionState } from "./sessionReducer";
@@ -95,11 +95,16 @@ describe("resolveActionIfAllowed", () => {
   });
 
   it("returns null and draws nothing from the rng for an unavailable action", () => {
-    const state = dealtState();
-    const unavailable = (["hit", "stand", "double", "split"] as const).find(
-      (action) => !state.scenario!.availableActions.includes(action),
-    );
-    if (!unavailable) return; // Every action happened to be available for this seed; nothing to assert.
+    // Hand-built (rather than dealt from a seed) so an unavailable action
+    // is guaranteed to exist and this test always actually asserts
+    // something, instead of a lucky seed making it a no-op pass.
+    const state = sessionReducer(createInitialSessionState(), {
+      type: "deal",
+      scenario: buildScenario(), // availableActions: ["hit", "stand"] — "double" and "split" are unavailable.
+      holeCard: HOLE_CARD,
+    });
+    const unavailable: Action = "double";
+    expect(state.scenario!.availableActions).not.toContain(unavailable);
 
     let drawCount = 0;
     const countingRng = () => {
