@@ -27,7 +27,7 @@
 .bestScore div { display: flex; flex-direction: column; font: 900 9px "Courier New", monospace; }
 .bestScore small { color: var(--muted); letter-spacing: .06em; }
 .bestScore strong { font-size: 11px; color: var(--ink); }
-.muteButton {
+.muteButton, .skillMapButton {
   width: 30px;
   height: 30px;
   display: grid;
@@ -37,13 +37,14 @@
   color: var(--mint);
   box-shadow: 2px 2px 0 #060c09;
 }
-.muteButton svg { width: 16px; height: 16px; }
-.muteButton:hover { border-color: var(--mint); }
+.muteButton svg, .skillMapButton svg { width: 16px; height: 16px; }
+.muteButton:hover, .skillMapButton:hover { border-color: var(--mint); }
+.skillMapButton[aria-expanded="true"] { border-color: var(--mint); background: #1a4433; }
 @media (min-width: 780px) {
   .hud { gap: 16px; }
   .score strong { font-size: 16px; }
   .comboBadge { font-size: 14px; padding: 3px 8px; }
   .bestScore strong { font-size: 13px; }
-  .muteButton { width: 34px; height: 34px; }
-  .muteButton svg { width: 18px; height: 18px; }
+  .muteButton, .skillMapButton { width: 34px; height: 34px; }
+  .muteButton svg, .skillMapButton svg { width: 18px; height: 18px; }
 }

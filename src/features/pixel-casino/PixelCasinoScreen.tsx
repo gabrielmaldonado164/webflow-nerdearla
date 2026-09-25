@@ -3,11 +3,12 @@
 import { ArrowRight, BookOpen, Lightning, Sparkle, Spade, Target, Trophy } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Action, Card, ScenarioCategory, Suit } from "@/blackjack";
 import { handValue, rankValue } from "@/blackjack";
 import { sendDecision } from "@/features/practice/sendDecision";
+import type { DecisionRecord } from "@/features/practice/types";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { handTotalLabel } from "./handTotalLabel";
@@ -25,6 +26,11 @@ import {
   revealedHandCards,
 } from "./revealSchedule";
 import { computeRunAccuracy, isNewBestScore } from "./runSummary";
+import { SkillMapPanel } from "./SkillMapPanel";
+import { computeToggleWeights } from "./skillMapWeights";
+import { summarizeForGameOver } from "./skillMapSummary";
+import { buildSkillMapViewModel, CATEGORY_LABEL, SKILL_MAP_CATEGORY_ORDER } from "./skillMapViewModel";
+import { useSkillMapData } from "./useSkillMapData";
 import { useSound } from "./useSound";
 import styles from "./PixelCasinoScreen.module.css";
 
@@ -46,12 +52,6 @@ const CLUES: Record<ScenarioCategory, string> = {
   hard: "No Ace counts as 11. Compare your total with the dealer's visible card.",
   soft: "An Ace counts as 11. You can draw once without busting.",
   pair: "A pair can stay together or split. The dealer's card changes the choice.",
-};
-
-const CATEGORY_LABEL: Record<ScenarioCategory, string> = {
-  hard: "Hard hands",
-  soft: "Soft hands",
-  pair: "Pairs",
 };
 
 interface GameCardProps {
@@ -116,6 +116,23 @@ function HoleCard({ card, revealed, dealIndex }: HoleCardProps) {
 }
 
 export function PixelCasinoScreen() {
+  // Persists a decision, then — once (and only once) that POST has
+  // genuinely settled (see `sendDecision`'s resolve-never-reject
+  // contract) — asks the Skill Map data source to refetch (T5: replaces
+  // a blind fixed-delay timer keyed off the decision count, which could
+  // lag or fire before the write actually finished). `notifyDecisionSettledRef`
+  // is populated below, once `useSkillMapData` exists; using a ref
+  // (rather than a direct dependency) lets `handleDecision` stay a
+  // stable identity and keeps this declared before `usePracticeSession`,
+  // which needs it as `onDecision`. The game itself never awaits this —
+  // `usePracticeSession` calls `onDecision` fire-and-forget.
+  const notifyDecisionSettledRef = useRef<() => void>(() => {});
+  const handleDecision = useCallback((record: DecisionRecord) => {
+    void sendDecision(record).then(() => {
+      notifyDecisionSettledRef.current();
+    });
+  }, []);
+
   const {
     scenario,
     feedback,
@@ -126,13 +143,46 @@ export function PixelCasinoScreen() {
     next,
     restart,
     setBestScore,
-  } = usePracticeSession({ onDecision: sendDecision });
+    setWeights,
+  } = usePracticeSession({ onDecision: handleDecision });
   const { muted, toggleMuted, play } = useSound();
   const [showClue, setShowClue] = useState(false);
   const [pendingAction, setPendingAction] = useState<Action | null>(null);
   const [handSequence, setHandSequence] = useState(0);
   const pendingTimer = useRef<number | null>(null);
   const reduceMotion = useReducedMotion();
+
+  // --- Skill Map (Phase 3 T4) -----------------------------------------
+  const [skillMapOpen, setSkillMapOpen] = useState(false);
+  const [focusWeakness, setFocusWeakness] = useState(false);
+  const runOverForSkillMap = run.status === "over";
+  const skillMapActive = skillMapOpen || runOverForSkillMap;
+  const { data: skillMapServerData, notifyDecisionSettled } = useSkillMapData({
+    active: skillMapActive,
+  });
+  useEffect(() => {
+    notifyDecisionSettledRef.current = notifyDecisionSettled;
+  }, [notifyDecisionSettled]);
+  const skillMapViewModel = useMemo(
+    () => buildSkillMapViewModel({ server: skillMapServerData, session: stats }),
+    [skillMapServerData, stats],
+  );
+  const gameOverSummary = useMemo(() => summarizeForGameOver(skillMapViewModel), [skillMapViewModel]);
+
+  // Applies adaptive practice weighting ONLY while the "Practice
+  // weakness" toggle is explicitly on (owner decision, 2026-09-24, T5):
+  // the scenario distribution must never change without the player's
+  // explicit choice. `computeToggleWeights` owns that gating — off
+  // always resolves to `undefined` regardless of `skillMapServerData`,
+  // so fetching stats for the game-over summary (triggered merely by
+  // the run ending, via `skillMapActive`) never itself starts biasing
+  // scenario generation; only flipping the toggle does. A failed
+  // refetch also can't change the weights: `useSkillMapData` keeps the
+  // last good `skillMapServerData` (T5 fix 1), so this effect's input
+  // is unchanged and it's a no-op re-run.
+  useEffect(() => {
+    setWeights(computeToggleWeights(skillMapServerData?.stats ?? null, focusWeakness));
+  }, [skillMapServerData, focusWeakness, setWeights]);
 
   // Kept current without re-triggering effects that shouldn't fire again
   // just because the mute state (and so `play`'s identity) changed
@@ -272,6 +322,10 @@ export function PixelCasinoScreen() {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      // The Skill Map panel owns Esc itself and must be the only thing
+      // reacting to keys while it's open — the table's H/S/D/P/Enter
+      // shortcuts must not fire underneath it (T4 requirement).
+      if (skillMapOpen) return;
       if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
       if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
       // Enter also activates a focused button (e.g. "Deal next hand"); let
@@ -292,7 +346,7 @@ export function PixelCasinoScreen() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [feedback, scenario, run.status, chooseAction, nextHand, restart]);
+  }, [feedback, scenario, run.status, chooseAction, nextHand, restart, skillMapOpen]);
 
   const resolution = feedback?.resolution ?? null;
   const isSplit = (resolution?.playerHands.length ?? 0) > 1;
@@ -317,7 +371,15 @@ export function PixelCasinoScreen() {
     <main className={styles.game}>
       <header className={styles.topHud}>
         <div className={styles.brand}><span className={styles.brandSymbol}><Spade weight="fill" aria-hidden="true" /></span><div><strong>21 LAB</strong><small>PLAY · LEARN · LEVEL UP</small></div></div>
-        <Hud run={run} muted={muted} onToggleMuted={toggleMuted} comboPulseToken={comboPulseToken} reduceMotion={Boolean(reduceMotion)} />
+        <Hud
+          run={run}
+          muted={muted}
+          onToggleMuted={toggleMuted}
+          comboPulseToken={comboPulseToken}
+          reduceMotion={Boolean(reduceMotion)}
+          onOpenSkillMap={() => setSkillMapOpen(true)}
+          skillMapOpen={skillMapOpen}
+        />
       </header>
 
       <div className={styles.gameLayout}>
@@ -409,6 +471,7 @@ export function PixelCasinoScreen() {
                   isNewBest={isNewBestScore(enteringBestScore, run.score)}
                   accuracy={computeRunAccuracy(decisions, run.decisions)}
                   onRestart={restart}
+                  summary={gameOverSummary}
                 />
               )}
             </AnimatePresence>
@@ -433,7 +496,7 @@ export function PixelCasinoScreen() {
           <div className={styles.panelTitle}><Target weight="fill" aria-hidden="true" /><div><small>PLAYER CARD</small><strong>Learn every hand.</strong></div></div>
           <div className={styles.scoreLine}><div><small>ACCURACY</small><strong>{stats.accuracy === null ? "--" : `${stats.accuracy}%`}</strong></div><div><small>CORRECT</small><strong>{stats.correctCount}/{stats.handsPlayed}</strong></div></div>
           <div className={styles.skillHeading}><span>SKILL MAP</span><small>SESSION</small></div>
-          {(["hard", "soft", "pair"] as ScenarioCategory[]).map((category) => {
+          {SKILL_MAP_CATEGORY_ORDER.map((category) => {
             const skill = stats.categoryStats[category];
             return <div className={styles.skillRow} key={category}><span>{CATEGORY_LABEL[category]}</span><div className={styles.skillTrack}><i style={{ width: `${skill.accuracy ?? 0}%` }} /></div><b>{skill.accuracy === null ? "--" : `${skill.accuracy}%`}</b></div>;
           })}
@@ -442,6 +505,14 @@ export function PixelCasinoScreen() {
           <small className={styles.webflowCredit}>Built on Webflow Cloud. Independent 21 Lab project.</small>
         </aside>
       </div>
+
+      <SkillMapPanel
+        open={skillMapOpen}
+        onClose={() => setSkillMapOpen(false)}
+        viewModel={skillMapViewModel}
+        focusWeakness={focusWeakness}
+        onToggleFocusWeakness={() => setFocusWeakness((value) => !value)}
+      />
     </main>
   );
 }

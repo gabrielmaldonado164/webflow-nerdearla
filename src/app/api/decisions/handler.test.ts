@@ -208,6 +208,15 @@ describe("handleDecisionRequest", () => {
   });
 
   it("returns 500 with a generic body and logs when an engine call throws unexpectedly (does not leak error.message)", async () => {
+    // Clears the module registry *before* mocking, not just after (see
+    // the file-level `afterEach` above): that `afterEach` only protects
+    // tests that run *after* this one. Run alone (`vitest run -t
+    // "engine call throws"`), no prior `afterEach` has fired, so without
+    // this the dynamic `import("./handler")` below would resolve from
+    // the cache populated by this file's static top-level `import`
+    // (line 6), which was never mocked, and the test would exercise the
+    // real engine instead of the thrown-error path.
+    vi.resetModules();
     vi.doMock("@/blackjack", async () => {
       const actual = await vi.importActual<typeof import("@/blackjack")>("@/blackjack");
       return {

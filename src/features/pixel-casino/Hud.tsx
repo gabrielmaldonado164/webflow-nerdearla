@@ -2,7 +2,7 @@
 
 /** HUD strip for run mode: lives, score, combo multiplier, best score, mute toggle. */
 
-import { Heart, Medal, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
+import { ChartBar, Heart, Medal, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 
 import { STARTING_LIVES, type RunState } from "@/training/run";
@@ -15,9 +15,13 @@ export interface HudProps {
   /** Changes whenever the multiplier just rose, so the badge re-plays its pop-in. */
   comboPulseToken: number;
   reduceMotion: boolean;
+  /** Opens the Skill Map panel (Phase 3 T4). */
+  onOpenSkillMap: () => void;
+  /** Whether the Skill Map panel is currently open, for `aria-expanded`. */
+  skillMapOpen: boolean;
 }
 
-export function Hud({ run, muted, onToggleMuted, comboPulseToken, reduceMotion }: HudProps) {
+export function Hud({ run, muted, onToggleMuted, comboPulseToken, reduceMotion, onOpenSkillMap, skillMapOpen }: HudProps) {
   return (
     <div className={styles.hud} aria-label="Run status">
       <div className={styles.lives} role="img" aria-label={`${run.lives} of ${STARTING_LIVES} lives left`}>
@@ -53,6 +57,17 @@ export function Hud({ run, muted, onToggleMuted, comboPulseToken, reduceMotion }
         <Medal weight="fill" aria-hidden="true" />
         <div><small>BEST</small><strong>{run.bestScore}</strong></div>
       </div>
+
+      <button
+        type="button"
+        className={styles.skillMapButton}
+        onClick={onOpenSkillMap}
+        aria-haspopup="dialog"
+        aria-expanded={skillMapOpen}
+        aria-label="Open Skill Map"
+      >
+        <ChartBar weight="fill" aria-hidden="true" />
+      </button>
 
       <button
         type="button"
