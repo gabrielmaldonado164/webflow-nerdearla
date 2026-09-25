@@ -10,6 +10,12 @@ describe("cardDealMotion", () => {
     expect(cardDealMotion(false, 0).initial).toEqual(server);
   });
 
+  it("starts an already-dealt card at rest so a remount never replays the deal", () => {
+    // The hole card swaps to its flip component at reveal; its faces must flip in place.
+    expect(cardDealMotion(false, 3, { alreadyDealt: true }).initial).toBe(false);
+    expect(cardDealMotion(null, 3, { alreadyDealt: true }).initial).toBe(false);
+  });
+
   it("settles every card at rest", () => {
     expect(cardDealMotion(null, 2).animate).toEqual({ x: 0, y: 0, rotate: 0, scale: 1, opacity: 1 });
   });

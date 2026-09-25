@@ -62,9 +62,11 @@ interface GameCardProps {
   card?: Card;
   faceDown?: boolean;
   dealIndex: number;
+  /** Already on the table: remounting must not replay the deal from the shoe. */
+  alreadyDealt?: boolean;
 }
 
-function GameCard({ card, faceDown = false, dealIndex }: GameCardProps) {
+function GameCard({ card, faceDown = false, dealIndex, alreadyDealt = false }: GameCardProps) {
   const reduceMotion = useReducedMotion();
   const red = card?.suit === "hearts" || card?.suit === "diamonds";
   const suit = card ? SUITS[card.suit] : "♠";
@@ -74,7 +76,7 @@ function GameCard({ card, faceDown = false, dealIndex }: GameCardProps) {
       className={`${styles.card} ${faceDown ? styles.cardBack : ""} ${red ? styles.cardRed : ""}`}
       role="img"
       aria-label={faceDown ? "Face-down dealer card" : card ? `${card.rank} of ${card.suit}` : "Card is being dealt"}
-      {...cardDealMotion(reduceMotion, dealIndex)}
+      {...cardDealMotion(reduceMotion, dealIndex, { alreadyDealt })}
     >
       {faceDown || !card ? (
         <span className={styles.cardBackSeal} aria-hidden="true">21</span>
@@ -107,10 +109,10 @@ function HoleCard({ card, revealed, dealIndex }: HoleCardProps) {
         transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: "easeInOut" }}
       >
         <div className={styles.flipFace}>
-          <GameCard faceDown dealIndex={dealIndex} />
+          <GameCard faceDown dealIndex={dealIndex} alreadyDealt />
         </div>
         <div className={`${styles.flipFace} ${styles.flipFaceBack}`}>
-          <GameCard card={card} dealIndex={dealIndex} />
+          <GameCard card={card} dealIndex={dealIndex} alreadyDealt />
         </div>
       </motion.div>
     </div>
