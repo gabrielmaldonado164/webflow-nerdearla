@@ -26,9 +26,10 @@ export interface GameOverOverlayProps {
    * `null` "while unloaded", which never actually happened).
    */
   summary: string;
+  onWhy?: () => void;
 }
 
-export function GameOverOverlay({ score, bestScore, isNewBest, accuracy, onRestart, summary }: GameOverOverlayProps) {
+export function GameOverOverlay({ score, bestScore, isNewBest, accuracy, onRestart, summary, onWhy }: GameOverOverlayProps) {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -58,6 +59,7 @@ export function GameOverOverlay({ score, bestScore, isNewBest, accuracy, onResta
           <div><small>ACCURACY</small><strong>{accuracy === null ? "--" : `${accuracy}%`}</strong></div>
         </div>
         {summary && <p className={styles.skillSummary}>{summary}</p>}
+        {onWhy && <button type="button" className={styles.whyButton} onClick={onWhy}>WHY DID I MISS?</button>}
         <button type="button" className={styles.restartButton} onClick={onRestart}>
           <ArrowClockwise weight="bold" aria-hidden="true" /> RESTART <kbd>ENTER</kbd>
         </button>

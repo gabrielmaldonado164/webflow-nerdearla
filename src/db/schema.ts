@@ -1,4 +1,4 @@
-import { sqliteTable, int, integer, text } from "drizzle-orm/sqlite-core";
+import { sqliteTable, int, integer, primaryKey, text } from "drizzle-orm/sqlite-core";
 
 export const healthChecks = sqliteTable("health_checks", {
   id: int().primaryKey({ autoIncrement: true }),
@@ -32,3 +32,10 @@ export const decisions = sqliteTable("decisions", {
   category: text("category").notNull(),
   createdAt: text("created_at").notNull(),
 });
+
+/** UTC-day request budget for the paid AI coach. */
+export const coachUsage = sqliteTable("coach_usage", {
+  playerId: text("player_id").notNull().references(() => players.id),
+  date: text("date").notNull(),
+  count: integer("count").notNull(),
+}, (table) => [primaryKey({ columns: [table.playerId, table.date] })]);

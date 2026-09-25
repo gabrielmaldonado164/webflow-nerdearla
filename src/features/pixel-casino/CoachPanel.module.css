@@ -1,0 +1,31 @@
+.overlay { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; padding: 12px; background: #06110edc; }
+.panel { width: min(100%, 560px); max-height: min(90vh, 760px); overflow-y: auto; padding: 16px; border: 4px solid #be9154; background: repeating-linear-gradient(0deg, #142b22 0 23px, #193329 23px 24px); color: #f7f0d4; box-shadow: 8px 8px 0 #020705, inset 0 0 0 3px #294a36; }
+.panel:focus { outline: none; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding-bottom: 12px; border-bottom: 2px solid #856642; }
+.header small { color: #8feab5; font: 900 10px "Courier New", monospace; letter-spacing: .1em; }
+.header h2 { display: flex; align-items: center; gap: 8px; margin: 5px 0 0; font: 900 19px "Courier New", monospace; }
+.header h2 svg { width: 24px; height: 24px; color: #f4d37e; }
+.header button { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border: 2px solid #977653; background: #2b2119; color: #f7f0d4; }
+.header button:hover { background: #49331f; }
+.evidence { margin-top: 15px; padding: 12px; border: 2px solid #5a8969; background: #0b2019; }
+.evidenceHeading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; margin-bottom: 12px; font: 900 11px "Courier New", monospace; }
+.evidenceHeading strong { color: #8feab5; }
+.evidenceHeading span { color: #f4d37e; }
+.evRow { display: grid; grid-template-columns: 55px minmax(0, 1fr) 46px; align-items: center; gap: 8px; margin: 7px 0; font: 800 11px "Courier New", monospace; }
+.evRow b { text-align: right; font-variant-numeric: tabular-nums; }
+.evTrack { height: 12px; overflow: hidden; border: 1px solid #699477; background: #12291f; }
+.evTrack i { display: block; height: 100%; background: linear-gradient(90deg, #508f72, #a8eab5); }
+.evNote { display: block; margin-top: 11px; color: #adc6ac; font-size: 10px; line-height: 1.45; }
+.answer { margin-top: 14px; padding: 13px; border-left: 4px solid #f4d37e; background: #2b3023; }
+.answerLabel { display: flex; align-items: center; gap: 5px; color: #f4d37e; font: 900 10px "Courier New", monospace; letter-spacing: .05em; }
+.answerLabel svg { width: 16px; height: 16px; }
+.answerLabel span { color: #b5c6a5; }
+.answer p { margin: 10px 0 0; white-space: pre-wrap; font-size: 13px; line-height: 1.55; }
+.form { margin-top: 17px; }
+.form label { display: block; margin-bottom: 6px; color: #8feab5; font: 900 10px "Courier New", monospace; letter-spacing: .06em; }
+.form > div { display: flex; gap: 8px; }
+.form input { width: 100%; min-width: 0; padding: 10px; border: 2px solid #708f72; border-radius: 0; outline: none; background: #0a1b15; color: #f7f0d4; font: 12px "Courier New", monospace; }
+.form input:focus { border-color: #a8eab5; }
+.form button { padding: 8px 13px; border: 2px solid #d9edbb; border-bottom-width: 5px; background: #78e5a9; color: #082617; font: 900 12px "Courier New", monospace; }
+.form button:disabled { opacity: .5; }
+.panel footer { margin-top: 15px; padding-top: 10px; border-top: 1px solid #5a795e; color: #a4b9a9; font-size: 10px; line-height: 1.4; }
