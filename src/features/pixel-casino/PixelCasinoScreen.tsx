@@ -403,13 +403,13 @@ export function PixelCasinoScreen() {
       <div className={styles.gameLayout}>
         <div className={styles.playColumn}>
           <section className={`${styles.stage} ${feedback?.isCorrect ? styles.stageWin : ""} ${feedback && !feedback.isCorrect ? styles.stageMiss : ""}`} aria-label="Pixel casino blackjack table">
-            <Image src="/pixel-casino-room.png" alt="" fill priority unoptimized sizes="(max-width: 780px) 100vw, 76vw" className={styles.roomArt} aria-hidden="true" />
+            <Image src="/pixel-casino-room.webp" alt="" fill priority unoptimized sizes="(max-width: 780px) 100vw, 76vw" className={styles.roomArt} aria-hidden="true" />
             <div className={styles.roomShade} aria-hidden="true" />
             <div className={styles.overheadLight} aria-hidden="true" />
             <div className={styles.sceneTop}><span>STRATEGY TABLE</span><span>HAND {handNumber.toString().padStart(2, "0")}</span></div>
             <div className={`${styles.coach} ${feedback?.isCorrect ? styles.coachCelebrate : ""}`} aria-hidden="true">
               <span className={styles.coachBubble}>{isGameOver ? "TABLE'S CLOSED!" : feedback ? (feedback.isCorrect ? "NICE READ!" : "LEARN IT!") : "YOUR MOVE!"}</span>
-              <Image src="/characters/dealer.png" alt="" width={1224} height={1285} unoptimized />
+              <Image src="/characters/dealer.webp" alt="" width={272} height={286} unoptimized />
             </div>
             <div className={styles.cardDeck} aria-hidden="true"><i /><i /><i /><i /></div>
 
