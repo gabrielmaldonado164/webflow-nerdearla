@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Action, Card, ScenarioCategory, Suit } from "@/blackjack";
 import { handValue, rankValue } from "@/blackjack";
+import { sendDecision } from "@/features/practice/sendDecision";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { handTotalLabel } from "./handTotalLabel";
@@ -125,7 +126,7 @@ export function PixelCasinoScreen() {
     next,
     restart,
     setBestScore,
-  } = usePracticeSession();
+  } = usePracticeSession({ onDecision: sendDecision });
   const { muted, toggleMuted, play } = useSound();
   const [showClue, setShowClue] = useState(false);
   const [pendingAction, setPendingAction] = useState<Action | null>(null);

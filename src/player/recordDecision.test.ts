@@ -1,9 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Card } from "@/blackjack";
 
 import type { DecisionRepository, DecisionRow } from "./recordDecision";
 import { recordDecision } from "./recordDecision";
+
+afterEach(() => {
+  vi.resetModules();
+  vi.doUnmock("@/blackjack");
+});
 
 function card(rank: Card["rank"], suit: Card["suit"] = "spades"): Card {
   return { rank, suit };
@@ -140,6 +145,43 @@ describe("recordDecision", () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     );
     expect(() => new Date(result.row.createdAt).toISOString()).not.toThrow();
+  });
+
+  it("propagates instead of swallowing when an engine call throws unexpectedly", async () => {
+    // The payload guard (parseDecisionPayload) now rejects impossible hands
+    // (bust/21+, oversized) before recordDecision ever runs, so a genuine
+    // engine throw here is an unexpected defect, not a routine domain
+    // rejection. It must surface to the caller (the API handler's 500
+    // path, which logs it server-side) instead of being remapped to a
+    // client-facing `{ ok: false, reason: error.message }` 400 — the
+    // latter would leak internal error text straight to the client.
+    vi.doMock("@/blackjack", async () => {
+      const actual = await vi.importActual<typeof import("@/blackjack")>("@/blackjack");
+      return {
+        ...actual,
+        optimalAction: () => {
+          throw new Error("engine: unexpected input");
+        },
+      };
+    });
+
+    const { recordDecision: recordDecisionWithMockedEngine } = await import(
+      "./recordDecision"
+    );
+    const repo = fakeRepo();
+
+    await expect(
+      recordDecisionWithMockedEngine(
+        {
+          playerId: PLAYER_ID,
+          playerCards: [card("10"), card("6")],
+          dealerUpcard: card("10"),
+          userAction: "hit",
+        },
+        repo,
+      ),
+    ).rejects.toThrow("engine: unexpected input");
+    expect(repo.inserted).toHaveLength(0);
   });
 
   it("propagates a repository failure instead of swallowing it", async () => {

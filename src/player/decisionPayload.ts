@@ -7,7 +7,7 @@
  */
 
 import type { Action, Card, Rank, Suit } from "@/blackjack";
-import { RANKS, SUITS } from "@/blackjack";
+import { handValue, RANKS, SUITS } from "@/blackjack";
 
 export interface DecisionPayload {
   playerCards: Card[];
@@ -20,6 +20,15 @@ export type ParseDecisionPayloadResult =
   | { ok: false; reason: string };
 
 const KNOWN_ACTIONS: readonly Action[] = ["hit", "stand", "double", "split"];
+
+/**
+ * Generous upper bound on a real hand's card count, well above anything
+ * reachable in actual play (even a worst-case all-Aces hand tops out at
+ * 20 cards before its total hits 21 and gets rejected below). Mainly a
+ * cheap early guard against a degenerate/oversized payload before doing
+ * any per-card validation work.
+ */
+const MAX_PLAYER_CARDS = 21;
 
 function isKnownCard(value: unknown): value is Card {
   if (typeof value !== "object" || value === null) {
@@ -53,6 +62,12 @@ export function parseDecisionPayload(raw: unknown): ParseDecisionPayloadResult {
   if (!Array.isArray(playerCards) || playerCards.length < 2) {
     return { ok: false, reason: "playerCards must be an array of at least two cards" };
   }
+  if (playerCards.length > MAX_PLAYER_CARDS) {
+    return {
+      ok: false,
+      reason: `playerCards must not exceed ${MAX_PLAYER_CARDS} cards`,
+    };
+  }
   if (!playerCards.every(isKnownCard)) {
     return { ok: false, reason: "playerCards contains an unknown or malformed card" };
   }
@@ -61,6 +76,12 @@ export function parseDecisionPayload(raw: unknown): ParseDecisionPayloadResult {
   }
   if (!isKnownAction(userAction)) {
     return { ok: false, reason: "userAction is not a known action" };
+  }
+  if (handValue(playerCards as Card[]).total >= 21) {
+    return {
+      ok: false,
+      reason: "playerCards is already at 21 or bust; not a valid decision point",
+    };
   }
 
   return {
