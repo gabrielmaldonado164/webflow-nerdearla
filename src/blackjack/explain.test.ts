@@ -76,6 +76,80 @@ describe("explainDecision", () => {
     expect(result.message.toLowerCase()).toContain("dealer");
   });
 
+  describe("miss messages never assume a specific wrong action", () => {
+    it("pair of tens vs 8, user hit: does not mention splitting", () => {
+      const result = explainDecision({
+        playerCards: [card("10"), card("10")],
+        dealerUpcard: card("8"),
+        userAction: "hit",
+        optimalAction: "stand",
+      });
+      expect(result.isCorrect).toBe(false);
+      expect(result.message.toLowerCase()).not.toContain("split");
+      expect(result.message.toLowerCase()).toContain("stand");
+    });
+
+    it("pair of tens vs 8, user split: does not claim the user hit", () => {
+      const result = explainDecision({
+        playerCards: [card("10"), card("10")],
+        dealerUpcard: card("8"),
+        userAction: "split",
+        optimalAction: "stand",
+      });
+      expect(result.isCorrect).toBe(false);
+      expect(result.message.toLowerCase()).not.toMatch(/\bhit(s|ting)?\b/);
+      expect(result.message.toLowerCase()).toContain("stand");
+    });
+
+    it("5-5 vs 6 (optimal double), user split: does not mention splitting", () => {
+      const result = explainDecision({
+        playerCards: [card("5"), card("5")],
+        dealerUpcard: card("6"),
+        userAction: "split",
+        optimalAction: "double",
+      });
+      expect(result.isCorrect).toBe(false);
+      expect(result.message.toLowerCase()).not.toContain("split");
+      expect(result.message.toLowerCase()).toContain("doubl");
+    });
+
+    it("5-5 vs 6 (optimal double), user hit: recommends doubling, not splitting", () => {
+      const result = explainDecision({
+        playerCards: [card("5"), card("5")],
+        dealerUpcard: card("6"),
+        userAction: "hit",
+        optimalAction: "double",
+      });
+      expect(result.isCorrect).toBe(false);
+      expect(result.message.toLowerCase()).not.toContain("split");
+      expect(result.message.toLowerCase()).toContain("doubl");
+    });
+
+    it("5-5 vs 10 (optimal hit), user split: does not mention splitting or doubling", () => {
+      const result = explainDecision({
+        playerCards: [card("5"), card("5")],
+        dealerUpcard: card("10"),
+        userAction: "split",
+        optimalAction: "hit",
+      });
+      expect(result.isCorrect).toBe(false);
+      expect(result.message.toLowerCase()).not.toContain("split");
+      expect(result.message.toLowerCase()).not.toContain("doubl");
+      expect(result.message.toLowerCase()).toContain("hit");
+    });
+
+    it("5-5 vs 10 (optimal hit) played correctly does not mention doubling", () => {
+      const result = explainDecision({
+        playerCards: [card("5"), card("5")],
+        dealerUpcard: card("10"),
+        userAction: "hit",
+        optimalAction: "hit",
+      });
+      expect(result.isCorrect).toBe(true);
+      expect(result.message.toLowerCase()).not.toContain("doubl");
+    });
+  });
+
   describe("situation family matches optimalAction", () => {
     // action -> a keyword the templates for that action consistently use.
     const ACTION_KEYWORD: Record<Action, RegExp> = {
@@ -213,6 +287,81 @@ describe("explainDecision", () => {
           }
         }
       }
+    });
+
+    it("full sweep: every 2-card starting hand vs every dealer upcard has a specific explanation whose family matches optimalAction, never the generic fallback", () => {
+      const GENERIC_PERFECT = "That is exactly the play basic strategy recommends for this situation.";
+      const GENERIC_MISS =
+        "Basic strategy calls for a different move here, keep practicing this spot and it will click.";
+
+      const ranks: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "A"];
+      const upcards: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "A"];
+      // A rank representative for each 10-value card, so K/Q/J combinations
+      // (which are all equivalent to "10" for strategy purposes) don't need
+      // to be swept separately.
+
+      const failures: string[] = [];
+
+      for (const rankA of ranks) {
+        for (const rankB of ranks) {
+          const playerCards = [card(rankA), card(rankB)];
+          for (const upcard of upcards) {
+            const dealerUpcard = card(upcard);
+            const optimal = optimalAction(playerCards, dealerUpcard, DEFAULT_RULES);
+
+            const correctResult = explainDecision({
+              playerCards,
+              dealerUpcard,
+              userAction: optimal,
+              optimalAction: optimal,
+            });
+            if (correctResult.message === GENERIC_PERFECT) {
+              failures.push(
+                `${rankA}-${rankB} vs ${upcard}: correct-answer message for "${optimal}" fell back to the generic message`,
+              );
+            }
+            // The family used for a correct answer must actually be the
+            // family for the action that was taken (e.g. the "standing is
+            // the play" family is only ever reachable when optimalAction
+            // is "stand"), not just any non-generic template.
+            if (!ACTION_KEYWORD[optimal].test(correctResult.message)) {
+              failures.push(
+                `${rankA}-${rankB} vs ${upcard}: correct-answer message for "${optimal}" does not name "${optimal}" ("${correctResult.message}")`,
+              );
+            }
+
+            for (const wrongAction of ["hit", "stand", "double", "split"] as Action[]) {
+              if (wrongAction === optimal) continue;
+              const missResult = explainDecision({
+                playerCards,
+                dealerUpcard,
+                userAction: wrongAction,
+                optimalAction: optimal,
+              });
+              if (missResult.message === GENERIC_MISS) {
+                failures.push(
+                  `${rankA}-${rankB} vs ${upcard}, user ${wrongAction} (optimal ${optimal}): miss message fell back to the generic message`,
+                );
+              }
+              // Same guard for a miss: the family must recommend the actual
+              // optimalAction, and never the opposite of it.
+              if (!ACTION_KEYWORD[optimal].test(missResult.message)) {
+                failures.push(
+                  `${rankA}-${rankB} vs ${upcard}, user ${wrongAction} (optimal ${optimal}): miss message does not name the optimal action "${optimal}" ("${missResult.message}")`,
+                );
+              }
+              const opposite = OPPOSITE_KEYWORD[optimal];
+              if (opposite && opposite.test(missResult.message)) {
+                failures.push(
+                  `${rankA}-${rankB} vs ${upcard}, user ${wrongAction} (optimal ${optimal}): miss message wrongly recommends the opposite of "${optimal}" ("${missResult.message}")`,
+                );
+              }
+            }
+          }
+        }
+      }
+
+      expect(failures).toEqual([]);
     });
   });
 });

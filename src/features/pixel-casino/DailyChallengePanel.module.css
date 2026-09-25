@@ -1,0 +1,37 @@
+.overlay { position: fixed; z-index: 70; inset: 0; display: grid; place-items: center; padding: 12px; background: #030805e8; backdrop-filter: blur(2px); }
+.panel { width: min(100%, 520px); max-height: min(92dvh, 760px); overflow-y: auto; padding: 16px; border: 4px solid #bd965c; background: repeating-linear-gradient(0deg, #142b22 0 23px, #193329 23px 24px); color: #f8f1d9; box-shadow: 8px 8px 0 #020705, inset 0 0 0 3px #294a36; font-family: "Courier New", monospace; }
+.panel:focus-visible { outline: 3px solid #70e5aa; outline-offset: -3px; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding-bottom: 12px; border-bottom: 2px solid #856642; }
+.header small { color: #8feab5; font: 900 10px "Courier New", monospace; letter-spacing: .1em; }
+.header h2 { margin: 5px 0 0; font: 900 19px "Courier New", monospace; }
+.closeButton { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border: 2px solid #977653; background: #2b2119; color: #f7f0d4; }
+.closeButton svg { width: 18px; height: 18px; }
+.intro { margin: 12px 0; color: #d5e4ce; font-size: 11px; line-height: 1.5; }
+.meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin: 13px 0; padding: 8px; border: 2px solid #50745a; background: #0b2019; color: #f4d37e; font: 900 11px "Courier New", monospace; }
+.progressTrack { height: 9px; border: 1px solid #668162; background: #0b1d16; overflow: hidden; }
+.progressTrack i { display: block; height: 100%; background: #78e5a9; transition: width .25s steps(5, end); }
+.scenario { margin-top: 14px; padding: 14px; border: 3px solid #886a43; background: radial-gradient(ellipse at 50% 0, #23533d, #102d22 75%); box-shadow: inset 0 0 0 3px #244934, 4px 4px 0 #07130d; text-align: center; }
+.scenarioTitle { margin: 0 0 12px; color: #f4d37e; font: 900 12px "Courier New", monospace; }
+.handLabel { display: block; margin-bottom: 5px; color: #c9d9bd; font: 900 9px "Courier New", monospace; letter-spacing: .06em; }
+.cards { display: flex; justify-content: center; gap: 8px; margin-bottom: 14px; }
+.card { display: grid; place-items: center; width: 50px; height: 67px; border: 3px solid #d1bea1; background: #faf0d4; color: #142b22; box-shadow: 3px 4px 0 #06130c; font: 900 19px "Courier New", monospace; }
+.cardRed { color: #bd453d; }
+.actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 14px; }
+.actionButton { min-height: 44px; border: 2px solid #a5d9ad; border-bottom-width: 5px; background: #27563a; color: #f8f1d9; font: 900 12px "Courier New", monospace; }
+.actionButton:hover:not(:disabled) { background: #347349; }
+.actionButton:disabled { opacity: .45; }
+.feedback { margin: 14px 0 0; padding: 10px; border-left: 4px solid #78e5a9; background: #123f2e; font-size: 12px; line-height: 1.5; }
+.feedbackMiss { border-color: #e8a48f; background: #432c27; }
+.feedback strong { display: block; margin-bottom: 4px; }
+.feedback p { margin: 0; }
+.primaryButton { width: 100%; min-height: 42px; margin-top: 14px; padding: 8px; border: 2px solid #d9edbb; border-bottom-width: 5px; background: #78e5a9; color: #082617; font: 900 12px "Courier New", monospace; }
+.primaryButton:hover:not(:disabled) { background: #9ff4be; }
+.primaryButton:disabled { opacity: .5; }
+.result { margin-top: 14px; padding: 14px; border: 2px solid #7ba981; background: #0b2019; text-align: center; }
+.result h3 { margin: 0 0 10px; color: #f4d37e; font: 900 17px "Courier New", monospace; }
+.result strong { display: block; font-size: 25px; }
+.result p { margin: 7px 0; font-size: 12px; }
+.error { margin: 14px 0; padding: 10px; border-left: 4px solid #e8a48f; background: #432c27; color: #ffe0d1; font-size: 11px; line-height: 1.5; }
+.footer { display: block; margin-top: 14px; padding-top: 10px; border-top: 1px solid #5a795e; color: #a4b9a9; font-size: 10px; line-height: 1.4; }
+@media (min-width: 500px) { .panel { padding: 22px 24px; } .card { width: 58px; height: 77px; font-size: 23px; } .actions { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .panel *, .panel *::before, .panel *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

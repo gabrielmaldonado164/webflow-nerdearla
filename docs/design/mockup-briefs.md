@@ -1,4 +1,6 @@
-# Design Mockup Briefs (pending work)
+# Archived Design Mockup Briefs
+
+> Superseded on 2026-09-23. The owner rejected these directions, including the planned E/F mockups. Of the three subsequent playable concepts, the owner selected Pixel Arcade. The current game runs at `/`; see `docs/ROADMAP.md` for status. Keep the feedback and animation constraints below as historical design input, not as unimplemented game rules.
 
 Static HTML mockups live in `design-mockups/` and are served locally with:
 
@@ -23,7 +25,7 @@ Screenshots: `design-mockups/shots/` (`v2-*` are the latest).
 - All action buttons neutral in the decide state (no hint highlighting).
 - Wants more exciting, motivating animations that make people want to play and learn.
 - Wants desktop versions as well as mobile.
-- The chosen direction is a **combination of A + B** (direction E below). A **new pixel-art direction** (F) is also requested for comparison.
+- Historical note: E (A + B) and F (pixel art) were requested, then explicitly rejected before implementation.
 
 ## Rules for any agent building mockups
 
