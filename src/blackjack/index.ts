@@ -32,3 +32,12 @@ export { simulateAllActions, simulateEV } from "./simulate";
 
 export type { ExplainDecisionInput, ExplainDecisionResult } from "./explain";
 export { explainDecision } from "./explain";
+
+export type {
+  HandOutcome,
+  ResolveHandInput,
+  ResolveHandResult,
+  ResolvedPlayerHand,
+  ResolveStep,
+} from "./resolve";
+export { dealHoleCard, resolveHand } from "./resolve";

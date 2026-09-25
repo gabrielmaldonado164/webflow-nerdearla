@@ -289,7 +289,7 @@ describe("explainDecision", () => {
       }
     });
 
-    it("full sweep: every 2-card starting hand vs every dealer upcard has a specific explanation, never the generic fallback", () => {
+    it("full sweep: every 2-card starting hand vs every dealer upcard has a specific explanation whose family matches optimalAction, never the generic fallback", () => {
       const GENERIC_PERFECT = "That is exactly the play basic strategy recommends for this situation.";
       const GENERIC_MISS =
         "Basic strategy calls for a different move here, keep practicing this spot and it will click.";
@@ -320,6 +320,15 @@ describe("explainDecision", () => {
                 `${rankA}-${rankB} vs ${upcard}: correct-answer message for "${optimal}" fell back to the generic message`,
               );
             }
+            // The family used for a correct answer must actually be the
+            // family for the action that was taken (e.g. the "standing is
+            // the play" family is only ever reachable when optimalAction
+            // is "stand"), not just any non-generic template.
+            if (!ACTION_KEYWORD[optimal].test(correctResult.message)) {
+              failures.push(
+                `${rankA}-${rankB} vs ${upcard}: correct-answer message for "${optimal}" does not name "${optimal}" ("${correctResult.message}")`,
+              );
+            }
 
             for (const wrongAction of ["hit", "stand", "double", "split"] as Action[]) {
               if (wrongAction === optimal) continue;
@@ -332,6 +341,19 @@ describe("explainDecision", () => {
               if (missResult.message === GENERIC_MISS) {
                 failures.push(
                   `${rankA}-${rankB} vs ${upcard}, user ${wrongAction} (optimal ${optimal}): miss message fell back to the generic message`,
+                );
+              }
+              // Same guard for a miss: the family must recommend the actual
+              // optimalAction, and never the opposite of it.
+              if (!ACTION_KEYWORD[optimal].test(missResult.message)) {
+                failures.push(
+                  `${rankA}-${rankB} vs ${upcard}, user ${wrongAction} (optimal ${optimal}): miss message does not name the optimal action "${optimal}" ("${missResult.message}")`,
+                );
+              }
+              const opposite = OPPOSITE_KEYWORD[optimal];
+              if (opposite && opposite.test(missResult.message)) {
+                failures.push(
+                  `${rankA}-${rankB} vs ${upcard}, user ${wrongAction} (optimal ${optimal}): miss message wrongly recommends the opposite of "${optimal}" ("${missResult.message}")`,
                 );
               }
             }
