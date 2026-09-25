@@ -264,4 +264,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .game *, .game *::before, .game *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  /* Server HTML carries the pre-animation pose; keep these at rest before hydration. */
+  .card { transform: none !important; }
+  .actions { opacity: 1 !important; transform: none !important; }
 }

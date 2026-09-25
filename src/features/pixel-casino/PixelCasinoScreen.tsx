@@ -35,6 +35,7 @@ import { summarizeForGameOver } from "./skillMapSummary";
 import { buildSkillMapViewModel, CATEGORY_LABEL, SKILL_MAP_CATEGORY_ORDER } from "./skillMapViewModel";
 import { useSkillMapData } from "./useSkillMapData";
 import { useSound } from "./useSound";
+import { cardDealMotion } from "./cardDealMotion";
 import styles from "./PixelCasinoScreen.module.css";
 
 const ACTIONS: { id: Action; label: string; key: string; detail: string }[] = [
@@ -73,9 +74,7 @@ function GameCard({ card, faceDown = false, dealIndex }: GameCardProps) {
       className={`${styles.card} ${faceDown ? styles.cardBack : ""} ${red ? styles.cardRed : ""}`}
       role="img"
       aria-label={faceDown ? "Face-down dealer card" : card ? `${card.rank} of ${card.suit}` : "Card is being dealt"}
-      initial={reduceMotion ? false : { x: 125, y: -75, rotate: 23, scale: 0.8, opacity: 1 }}
-      animate={{ x: 0, y: 0, rotate: 0, scale: 1, opacity: 1 }}
-      transition={reduceMotion ? { duration: 0 } : { delay: dealIndex * 0.13, type: "spring", stiffness: 255, damping: 20 }}
+      {...cardDealMotion(reduceMotion, dealIndex)}
     >
       {faceDown || !card ? (
         <span className={styles.cardBackSeal} aria-hidden="true">21</span>
@@ -504,7 +503,7 @@ export function PixelCasinoScreen() {
                 <div className={styles.feedbackBadge}>{feedback.isCorrect ? <Trophy weight="fill" aria-hidden="true" /> : <BookOpen weight="fill" aria-hidden="true" />}</div>
                 <div className={styles.feedbackText}><strong>{feedback.isCorrect ? "Perfect move!" : "Not quite. Now you know."}</strong><p>{feedback.message}</p>{!feedback.isCorrect && <small>Best move: {bestAction}</small>}<span>+{feedback.isCorrect ? CORRECT_DECISION_XP : INCORRECT_DECISION_XP} SESSION XP</span>{!feedback.isCorrect && <button type="button" className={styles.whyButton} onClick={() => { setCoachMode("why"); setCoachOpen(true); }}>WHY? SEE THE ODDS</button>}</div>
                 {!isGameOver && <button type="button" className={styles.nextButton} onClick={nextHand}>DEAL NEXT HAND <ArrowRight weight="bold" aria-hidden="true" /></button>}
-              </motion.div> : <motion.div key="actions" className={styles.actions} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              </motion.div> : <motion.div key="actions" className={styles.actions} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={reduceMotion ? { duration: 0 } : undefined}>
                 {ACTIONS.map(({ id, label, key, detail }) => <button key={id} type="button" className={`${styles.actionButton} ${pendingAction === id ? styles.actionPressed : ""} ${pendingAction === id && scenario?.optimalAction !== id ? styles.actionWrong : ""}`} disabled={!scenario || Boolean(pendingAction) || !scenario.availableActions.includes(id)} onClick={() => chooseAction(id)} aria-label={`${label}: ${detail}`}><kbd>{key}</kbd><strong>{label}</strong><span>{detail}</span></button>)}
               </motion.div>}
             </AnimatePresence>
