@@ -2,7 +2,7 @@
 
 /** HUD strip for run mode: lives, score, combo multiplier, best score, mute toggle. */
 
-import { ChartBar, Heart, Medal, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
+import { CalendarBlank, ChartBar, Heart, Medal, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 
 import { STARTING_LIVES, type RunState } from "@/training/run";
@@ -19,9 +19,11 @@ export interface HudProps {
   onOpenSkillMap: () => void;
   /** Whether the Skill Map panel is currently open, for `aria-expanded`. */
   skillMapOpen: boolean;
+  onOpenDailyChallenge: () => void;
+  dailyChallengeOpen: boolean;
 }
 
-export function Hud({ run, muted, onToggleMuted, comboPulseToken, reduceMotion, onOpenSkillMap, skillMapOpen }: HudProps) {
+export function Hud({ run, muted, onToggleMuted, comboPulseToken, reduceMotion, onOpenSkillMap, skillMapOpen, onOpenDailyChallenge, dailyChallengeOpen }: HudProps) {
   return (
     <div className={styles.hud} aria-label="Run status">
       <div className={styles.lives} role="img" aria-label={`${run.lives} of ${STARTING_LIVES} lives left`}>
@@ -67,6 +69,18 @@ export function Hud({ run, muted, onToggleMuted, comboPulseToken, reduceMotion, 
         aria-label="Open Skill Map"
       >
         <ChartBar weight="fill" aria-hidden="true" />
+      </button>
+
+      <button
+        type="button"
+        className={styles.dailyButton}
+        onClick={onOpenDailyChallenge}
+        aria-haspopup="dialog"
+        aria-expanded={dailyChallengeOpen}
+        aria-label="Open Daily Challenge"
+        title="Daily Challenge"
+      >
+        <CalendarBlank weight="fill" aria-hidden="true" />
       </button>
 
       <button

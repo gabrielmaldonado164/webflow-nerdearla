@@ -11,6 +11,7 @@ import { sendDecision } from "@/features/practice/sendDecision";
 import type { DecisionRecord } from "@/features/practice/types";
 import { usePracticeSession } from "@/features/practice/usePracticeSession";
 import { CoachPanel } from "./CoachPanel";
+import { DailyChallengePanel } from "./DailyChallengePanel";
 import type { CoachHand } from "./coachRequest";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { handTotalLabel } from "./handTotalLabel";
@@ -34,6 +35,7 @@ import { summarizeForGameOver } from "./skillMapSummary";
 import { buildSkillMapViewModel, CATEGORY_LABEL, SKILL_MAP_CATEGORY_ORDER } from "./skillMapViewModel";
 import { useSkillMapData } from "./useSkillMapData";
 import { useSound } from "./useSound";
+import { cardDealMotion } from "./cardDealMotion";
 import styles from "./PixelCasinoScreen.module.css";
 
 const ACTIONS: { id: Action; label: string; key: string; detail: string }[] = [
@@ -60,9 +62,11 @@ interface GameCardProps {
   card?: Card;
   faceDown?: boolean;
   dealIndex: number;
+  /** Already on the table: remounting must not replay the deal from the shoe. */
+  alreadyDealt?: boolean;
 }
 
-function GameCard({ card, faceDown = false, dealIndex }: GameCardProps) {
+function GameCard({ card, faceDown = false, dealIndex, alreadyDealt = false }: GameCardProps) {
   const reduceMotion = useReducedMotion();
   const red = card?.suit === "hearts" || card?.suit === "diamonds";
   const suit = card ? SUITS[card.suit] : "♠";
@@ -72,9 +76,7 @@ function GameCard({ card, faceDown = false, dealIndex }: GameCardProps) {
       className={`${styles.card} ${faceDown ? styles.cardBack : ""} ${red ? styles.cardRed : ""}`}
       role="img"
       aria-label={faceDown ? "Face-down dealer card" : card ? `${card.rank} of ${card.suit}` : "Card is being dealt"}
-      initial={reduceMotion ? false : { x: 125, y: -75, rotate: 23, scale: 0.8, opacity: 1 }}
-      animate={{ x: 0, y: 0, rotate: 0, scale: 1, opacity: 1 }}
-      transition={reduceMotion ? { duration: 0 } : { delay: dealIndex * 0.13, type: "spring", stiffness: 255, damping: 20 }}
+      {...cardDealMotion(reduceMotion, dealIndex, { alreadyDealt })}
     >
       {faceDown || !card ? (
         <span className={styles.cardBackSeal} aria-hidden="true">21</span>
@@ -107,10 +109,10 @@ function HoleCard({ card, revealed, dealIndex }: HoleCardProps) {
         transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: "easeInOut" }}
       >
         <div className={styles.flipFace}>
-          <GameCard faceDown dealIndex={dealIndex} />
+          <GameCard faceDown dealIndex={dealIndex} alreadyDealt />
         </div>
         <div className={`${styles.flipFace} ${styles.flipFaceBack}`}>
-          <GameCard card={card} dealIndex={dealIndex} />
+          <GameCard card={card} dealIndex={dealIndex} alreadyDealt />
         </div>
       </motion.div>
     </div>
@@ -150,6 +152,7 @@ export function PixelCasinoScreen() {
   const { muted, toggleMuted, play } = useSound();
   const [showClue, setShowClue] = useState(false);
   const [coachOpen, setCoachOpen] = useState(false);
+  const [dailyChallengeOpen, setDailyChallengeOpen] = useState(false);
   const [coachMode, setCoachMode] = useState<"why" | "chat">("chat");
   const [pendingAction, setPendingAction] = useState<Action | null>(null);
   const [handSequence, setHandSequence] = useState(0);
@@ -329,7 +332,7 @@ export function PixelCasinoScreen() {
       // The Skill Map panel owns Esc itself and must be the only thing
       // reacting to keys while it's open — the table's H/S/D/P/Enter
       // shortcuts must not fire underneath it (T4 requirement).
-      if (skillMapOpen || coachOpen) return;
+      if (skillMapOpen || coachOpen || dailyChallengeOpen) return;
       if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
       if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
       // Enter also activates a focused button (e.g. "Deal next hand"); let
@@ -350,7 +353,7 @@ export function PixelCasinoScreen() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [feedback, scenario, run.status, chooseAction, nextHand, restart, skillMapOpen, coachOpen]);
+  }, [feedback, scenario, run.status, chooseAction, nextHand, restart, skillMapOpen, coachOpen, dailyChallengeOpen]);
 
   const coachHand: CoachHand | null = useMemo(() => {
     if (!scenario || !feedback) return null;
@@ -393,19 +396,21 @@ export function PixelCasinoScreen() {
           reduceMotion={Boolean(reduceMotion)}
           onOpenSkillMap={() => setSkillMapOpen(true)}
           skillMapOpen={skillMapOpen}
+          onOpenDailyChallenge={() => setDailyChallengeOpen(true)}
+          dailyChallengeOpen={dailyChallengeOpen}
         />
       </header>
 
       <div className={styles.gameLayout}>
         <div className={styles.playColumn}>
           <section className={`${styles.stage} ${feedback?.isCorrect ? styles.stageWin : ""} ${feedback && !feedback.isCorrect ? styles.stageMiss : ""}`} aria-label="Pixel casino blackjack table">
-            <Image src="/pixel-casino-room.png" alt="" fill priority unoptimized sizes="(max-width: 780px) 100vw, 76vw" className={styles.roomArt} aria-hidden="true" />
+            <Image src="/pixel-casino-room.webp" alt="" fill priority unoptimized sizes="(max-width: 780px) 100vw, 76vw" className={styles.roomArt} aria-hidden="true" />
             <div className={styles.roomShade} aria-hidden="true" />
             <div className={styles.overheadLight} aria-hidden="true" />
             <div className={styles.sceneTop}><span>STRATEGY TABLE</span><span>HAND {handNumber.toString().padStart(2, "0")}</span></div>
             <div className={`${styles.coach} ${feedback?.isCorrect ? styles.coachCelebrate : ""}`} aria-hidden="true">
               <span className={styles.coachBubble}>{isGameOver ? "TABLE'S CLOSED!" : feedback ? (feedback.isCorrect ? "NICE READ!" : "LEARN IT!") : "YOUR MOVE!"}</span>
-              <Image src="/characters/dealer.png" alt="" width={1224} height={1285} unoptimized />
+              <Image src="/characters/dealer.webp" alt="" width={272} height={286} unoptimized />
             </div>
             <div className={styles.cardDeck} aria-hidden="true"><i /><i /><i /><i /></div>
 
@@ -500,7 +505,7 @@ export function PixelCasinoScreen() {
                 <div className={styles.feedbackBadge}>{feedback.isCorrect ? <Trophy weight="fill" aria-hidden="true" /> : <BookOpen weight="fill" aria-hidden="true" />}</div>
                 <div className={styles.feedbackText}><strong>{feedback.isCorrect ? "Perfect move!" : "Not quite. Now you know."}</strong><p>{feedback.message}</p>{!feedback.isCorrect && <small>Best move: {bestAction}</small>}<span>+{feedback.isCorrect ? CORRECT_DECISION_XP : INCORRECT_DECISION_XP} SESSION XP</span>{!feedback.isCorrect && <button type="button" className={styles.whyButton} onClick={() => { setCoachMode("why"); setCoachOpen(true); }}>WHY? SEE THE ODDS</button>}</div>
                 {!isGameOver && <button type="button" className={styles.nextButton} onClick={nextHand}>DEAL NEXT HAND <ArrowRight weight="bold" aria-hidden="true" /></button>}
-              </motion.div> : <motion.div key="actions" className={styles.actions} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              </motion.div> : <motion.div key="actions" className={styles.actions} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={reduceMotion ? { duration: 0 } : undefined}>
                 {ACTIONS.map(({ id, label, key, detail }) => <button key={id} type="button" className={`${styles.actionButton} ${pendingAction === id ? styles.actionPressed : ""} ${pendingAction === id && scenario?.optimalAction !== id ? styles.actionWrong : ""}`} disabled={!scenario || Boolean(pendingAction) || !scenario.availableActions.includes(id)} onClick={() => chooseAction(id)} aria-label={`${label}: ${detail}`}><kbd>{key}</kbd><strong>{label}</strong><span>{detail}</span></button>)}
               </motion.div>}
             </AnimatePresence>
@@ -515,7 +520,7 @@ export function PixelCasinoScreen() {
             const skill = stats.categoryStats[category];
             return <div className={styles.skillRow} key={category}><span>{CATEGORY_LABEL[category]}</span><div className={styles.skillTrack}><i style={{ width: `${skill.accuracy ?? 0}%` }} /></div><b>{skill.accuracy === null ? "--" : `${skill.accuracy}%`}</b></div>;
           })}
-          <div className={styles.panelPrompt}><Lightning weight="fill" aria-hidden="true" /><p><strong>Small decisions. Big improvement.</strong><span>Pick a move, learn why, then try another hand. No bets, no chips, just skill.</span></p></div>
+          <div className={styles.panelPrompt}><Lightning weight="fill" aria-hidden="true" /><p><strong>Small decisions. Big improvement.</strong><span>Pick a move, learn why, then try another hand. No bets, no chips, just skill.</span><span>Soft hands and pairs come up more often than in a real deck, so you practice the tricky spots.</span></p></div>
           <button type="button" className={styles.askDealerButton} onClick={() => { setCoachMode("chat"); setCoachOpen(true); }}><Sparkle weight="fill" aria-hidden="true" /> ASK THE DEALER</button>
           <small className={styles.sessionOnly}>Progress resets when this session ends.</small>
           <small className={styles.webflowCredit}>Built on Webflow Cloud. Independent 21 Lab project.</small>
@@ -529,6 +534,7 @@ export function PixelCasinoScreen() {
         focusWeakness={focusWeakness}
         onToggleFocusWeakness={() => setFocusWeakness((value) => !value)}
       />
+      <DailyChallengePanel open={dailyChallengeOpen} onClose={() => setDailyChallengeOpen(false)} />
       {coachOpen && <CoachPanel
         open={coachOpen}
         mode={coachMode}

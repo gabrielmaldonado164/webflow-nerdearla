@@ -3,8 +3,9 @@
 import { ChatCircleDots, Sparkle, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { coachQuotaCopy, mergeUsageIntoQuota, type CoachQuotaState } from "./coachQuotaCopy";
 import type { CoachEvidence, CoachHand } from "./coachRequest";
-import { fetchCoachEvidence, streamCoachReply } from "./coachRequest";
+import { fetchCoachEvidence, fetchCoachUsage, streamCoachReply } from "./coachRequest";
 import styles from "./CoachPanel.module.css";
 
 interface CoachPanelProps {
@@ -25,6 +26,7 @@ export function CoachPanel({ open, mode, hand, template, onClose }: CoachPanelPr
   const [question, setQuestion] = useState("");
   const [waiting, setWaiting] = useState(false);
   const [source, setSource] = useState<"ai" | "template" | null>(null);
+  const [quota, setQuota] = useState<CoachQuotaState>({ limit: null, remaining: null, outcomeKind: null, refunded: false });
   const controllerRef = useRef<AbortController | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -36,13 +38,19 @@ export function CoachPanel({ open, mode, hand, template, onClose }: CoachPanelPr
     setReply("");
     setSource(null);
     setWaiting(true);
-    const succeeded = await streamCoachReply(request, controller.signal, setReply);
+    const outcome = await streamCoachReply(request, controller.signal, setReply);
     if (controller.signal.aborted) return;
-    if (!succeeded) {
+    setQuota((previous) => ({
+      limit: previous.limit,
+      remaining: outcome.remaining ?? previous.remaining,
+      outcomeKind: outcome.kind,
+      refunded: outcome.kind === "unavailable" && outcome.refunded,
+    }));
+    if (outcome.kind === "ok") {
+      setSource("ai");
+    } else {
       setReply(fallback);
       setSource("template");
-    } else {
-      setSource("ai");
     }
     setWaiting(false);
   }, []);
@@ -55,6 +63,16 @@ export function CoachPanel({ open, mode, hand, template, onClose }: CoachPanelPr
       controllerRef.current?.abort();
       previousFocusRef.current?.focus();
     };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const usageController = new AbortController();
+    void fetchCoachUsage(usageController.signal).then((usage) => {
+      if (usageController.signal.aborted || !usage) return;
+      setQuota((previous) => mergeUsageIntoQuota(previous, usage));
+    });
+    return () => usageController.abort();
   }, [open]);
 
   useEffect(() => {
@@ -84,6 +102,7 @@ export function CoachPanel({ open, mode, hand, template, onClose }: CoachPanelPr
 
   if (!open) return null;
 
+  const quotaCopy = coachQuotaCopy(quota);
   const bestEv = evidence ? Math.max(...evidence.ev.map((row) => row.ev)) : 0;
   const worstEv = evidence ? Math.min(...evidence.ev.map((row) => row.ev)) : 0;
   return (
@@ -93,6 +112,13 @@ export function CoachPanel({ open, mode, hand, template, onClose }: CoachPanelPr
           <div><small>21 LAB · STRATEGY DESK</small><h2 id="coach-heading"><ChatCircleDots weight="fill" aria-hidden="true" /> {mode === "why" ? "WHY THAT MOVE?" : "ASK THE DEALER"}</h2></div>
           <button type="button" onClick={onClose} aria-label="Close coach"><X weight="bold" /></button>
         </header>
+        {quotaCopy.counter && (
+          <div className={styles.quota}>
+            <span>{quotaCopy.counter}</span>
+            {quotaCopy.limitMessage && <small className={styles.quotaLimit}>{quotaCopy.limitMessage}</small>}
+            {quotaCopy.refundMessage && <small className={styles.quotaRefund}>{quotaCopy.refundMessage}</small>}
+          </div>
+        )}
         {mode === "why" && hand && (
           <section className={styles.evidence} aria-label="Simulated expected value by action">
             <div className={styles.evidenceHeading}><strong>THE ENGINE SAYS</strong><span>{evidence ? `${ACTION_LABEL[evidence.optimalAction]} is the best move` : "Calculating the odds..."}</span></div>
