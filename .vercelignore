@@ -1,0 +1,8 @@
+# Local tooling and generated output that must not be uploaded to Vercel
+.codegraph
+.atl
+.agents
+.claude
+.playwright-mcp
+dist
+local.db*
