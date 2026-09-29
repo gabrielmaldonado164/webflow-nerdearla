@@ -1,11 +1,13 @@
 import { defineConfig } from "drizzle-kit";
 
+import { resolveDatabaseConfig } from "./src/db/config";
+
+// Migrations never fall back to a local file implicitly: use `npm run db:migrate:local`.
+const { url, authToken } = resolveDatabaseConfig(process.env, { allowLocalFallback: false });
+
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   dialect: "turso",
-  dbCredentials: {
-    url: process.env.TURSO_DATABASE_URL ?? "file:local.db",
-    authToken: process.env.TURSO_AUTH_TOKEN,
-  },
+  dbCredentials: { url, authToken },
 });

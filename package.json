@@ -12,8 +12,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:generate": "TURSO_DATABASE_URL=file:local.db drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:migrate:local": "TURSO_DATABASE_URL=file:local.db drizzle-kit migrate"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.55",

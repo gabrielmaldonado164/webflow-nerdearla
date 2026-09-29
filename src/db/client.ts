@@ -1,10 +1,8 @@
 import { createClient, type Client } from "@libsql/client";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 
+import { resolveDatabaseConfig } from "./config";
 import * as schema from "./schema";
-
-/** Local development falls back to a file-backed libSQL database. */
-const LOCAL_DATABASE_URL = "file:local.db";
 
 let client: Client | undefined;
 let db: LibSQLDatabase<typeof schema> | undefined;
@@ -14,10 +12,7 @@ let db: LibSQLDatabase<typeof schema> | undefined;
  * few callers that need hand-written SQL such as the coach rate limiter.
  */
 export function getLibsqlClient(): Client {
-  client ??= createClient({
-    url: process.env.TURSO_DATABASE_URL || LOCAL_DATABASE_URL,
-    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
-  });
+  client ??= createClient(resolveDatabaseConfig(process.env));
   return client;
 }
 
