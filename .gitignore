@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -40,12 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# cloudflare / opennext
-/.open-next/
-/.wrangler/
-worker-configuration.d.ts
-
-# local sqlite (drizzle-kit / wrangler d1 --local)
+# local sqlite (drizzle-kit)
 *.sqlite
 *.sqlite3
 
