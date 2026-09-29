@@ -46,4 +46,4 @@ The owner wants the web published on Vercel. Vercel has no D1, so persistence mu
 - Engram mirror pending: mem_save refused (multiple active sessions for the project).
 
 ## Next Step
-All tasks done. Pending owner decisions: push branch / PR to main, connect GitHub auto-deploy, retire the Webflow Cloud app, commit or ignore the Turso agent skill files (.agents/, .claude/skills, skills-lock.json).
+Migration complete: `main` is the primary branch, Vercel is the production host, and the Webflow Cloud app has been archived. Optional follow-ups: connect GitHub auto-deploy and decide whether to commit or ignore the local Turso agent skill files (`.agents/`, `.claude/skills`, `skills-lock.json`).
