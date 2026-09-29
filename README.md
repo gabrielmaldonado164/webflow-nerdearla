@@ -2,7 +2,7 @@
 
 **Learn blackjack strategy by playing, not by reading.**
 
-Live: the Webflow Cloud deployment at https://lab21.webflow.io/ is being retired. The app now targets Vercel; the public Vercel URL is pending and will be added here once the first deploy is done.
+Live: https://lab21-nine.vercel.app/ (Vercel + Turso). The previous Webflow Cloud deployment at https://lab21.webflow.io/ is being retired.
 
 21 Lab is an educational blackjack strategy trainer. You play real hands against a dealer, and every decision is graded against a deterministic basic-strategy engine — not a model's guess. There is no real money, no betting, and no chips: it's a training tool, not a casino. An AI coach can explain *why* a move was right or wrong, backed by the same engine and by simulated expected value, and the app works fully even when the AI is unavailable.
 
@@ -16,7 +16,7 @@ Built for the Nerdearla 2026 Webflow App Challenge (target categories: Best Tech
 
 ## Try it in 30 seconds
 
-1. Open the live app (URL pending, see above) — you're already at the table, no sign-up, no landing page.
+1. Open the [live app](https://lab21-nine.vercel.app/) — you're already at the table, no sign-up, no landing page.
 2. Play a hand: pick hit, stand, double, or split. You get instant feedback ("Perfect move" / "Not quite").
 3. Tap **Skill Map** to see your accuracy by hand type, streaks, and badges.
 4. Tap **Daily Challenge** for a fixed ten-hand set that's the same for everyone that day.

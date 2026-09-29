@@ -28,7 +28,7 @@ The owner wants the web published on Vercel. Vercel has no D1, so persistence mu
 - [x] T2 — Remove Cloudflare/Webflow Cloud tooling: `open-next.config.ts`, `wrangler.json`, `cloudflare-env.d.ts`, `webflow.json`, `cf:*` scripts, `@opennextjs/cloudflare`, `wrangler`, `@cloudflare/workers-types`; `drizzle.config.ts` dialect `turso` + `db:migrate` via drizzle-kit; `.env.example`. Route: delegated with T1 context.
 - [x] T2b — Review follow-ups (owner-accepted): fail fast in production when `TURSO_DATABASE_URL` is missing (local file fallback only outside production); share one env resolver between runtime and `drizzle.config.ts` so empty strings behave the same and `db:migrate` never silently targets the local file when a remote is intended; add a real in-memory libSQL test for the rate limiter. Route: delegated (writer trigger).
 - [x] T3 — Docs: README, CLAUDE.md, docs/ROADMAP.md deploy sections point to Vercel + Turso. Route: delegated.
-- [ ] T4 — Provision and deploy (owner-authorized remote work): Turso DB via Vercel Marketplace, env vars, remote migration, first Vercel deploy, smoke test. Route: inline with owner.
+- [x] T4 — Provision and deploy (owner-authorized remote work): Turso DB via Vercel Marketplace, env vars, remote migration, first Vercel deploy, smoke test. Route: inline with owner.
 
 ## Acceptance Criteria
 - No imports of `@opennextjs/cloudflare`, `@cloudflare/workers-types`, or `D1Database` remain.
@@ -42,7 +42,8 @@ The owner wants the web published on Vercel. Vercel has no D1, so persistence mu
 - Review (RDD, medium, consent granted) review-003888c4a5042907 over 83bdfcf..3ad8c35: approved + acknowledged (authority burned). Advisory findings: silent `file:local.db` fallback in production (src/db/client.ts:17-20); drizzle.config `??` vs runtime `||` disagree on empty URL and db:migrate silently targets local file (drizzle.config.ts:8-9); rateLimit tests use a fake, no real libSQL SQL test. Reviewed boundary: 3ad8c35.
 - T2b done (delegated writer) — 9130be2 `fix(db): fail fast without a database url in production`. New `src/db/config.ts` resolver shared by runtime and drizzle.config (no local fallback for migrations); `db:migrate:local` added; `db:generate` pins a local URL. RED: config.test.ts missing module; GREEN: npm test 576/576, tsc, lint clean; build clean without TURSO vars; `env -u TURSO_DATABASE_URL npm run db:migrate` exits 1 with a clear message. Real in-memory libSQL rate-limit test added. Parent spot check: vitest 576/576. RDD assess (base 3ad8c35): medium, under_budget — pending in slice.
 - T3 done (delegated writer) — 6f6d48f `docs: document vercel and turso deployment`. README, CLAUDE.md, ROADMAP (new Phase 7 + progress line) updated; live URL marked pending; lint clean. RDD assess (base 3ad8c35): medium, 259 lines, under_budget — pending in slice.
+- T4 done (inline with owner) — Vercel project barasa/lab21; Turso lab21-db (Starter) via Marketplace; COMMAND_CODE_MODEL + secret COMMAND_CODE_API_KEY (first attempt stored empty via non-TTY `!`, owner re-set from own terminal); `npm run db:migrate` applied to Turso; `.vercelignore` added (deploy failed uploading .codegraph socket); prod live at https://lab21-nine.vercel.app. Smoke: /, /api/health (Turso write+read), /api/daily, /api/stats, /api/coach/usage 200; coach stream 200, quota 19/20. GitHub auto-deploy not connected.
 - Engram mirror pending: mem_save refused (multiple active sessions for the project).
 
 ## Next Step
-T4 with owner authorization.
+All tasks done. Pending owner decisions: push branch / PR to main, connect GitHub auto-deploy, retire the Webflow Cloud app, commit or ignore the Turso agent skill files (.agents/, .claude/skills, skills-lock.json).

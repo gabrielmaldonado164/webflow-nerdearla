@@ -173,7 +173,7 @@ Tracked in `odd/tasks/vercel-migration.md` on branch `feat/vercel-migration`.
 - [x] T2 — Remove Cloudflare/Webflow Cloud tooling; `drizzle.config.ts` on the `turso` dialect
 - [x] T2b — Review follow-ups: fail fast without `TURSO_DATABASE_URL` in production, shared env resolver, real libSQL rate-limit test
 - [x] T3 — Docs (README, CLAUDE.md, this file) point to Vercel + Turso
-- [ ] T4 — Provision Turso via the Vercel Marketplace, set env vars, run the remote migration, first Vercel deploy, smoke test (owner-authorized remote work)
+- [x] T4 — Provision Turso via the Vercel Marketplace, set env vars, run the remote migration, first Vercel deploy, smoke test (owner-authorized remote work)
 
 ### Phase 6 — Submit (Fri 25, before 15:00 ART; buffer until 18:00)
 - [x] Submit the form: GitHub user, app URL, description (submitted 2026-09-25)
@@ -233,3 +233,4 @@ Append one line per session: date, what was done, and what comes next.
 - 2026-09-25: Pushed the full chain and opened PRs (feature-branch-chain): draft tracker #1 `feat/21-lab` → `main` (empty tracker commit), children #2–#16 each targeting its parent branch; bodies carry Chain Context and the diagram. 11 of 15 slices exceed 400 changed lines; bodies request `size:exception` (already reviewed per work unit). Merge order: #2…#16 into the tracker, then #1 into `main` (owner decision).
 - 2026-09-25: Merged PRs #2–#16 into the tracker and #1 into `main` (`4221a0e`). Owner submitted the challenge form (GitHub `gabrielmaldonado164`, https://lab21.webflow.io/, short description). Phase 6 complete; only fixes from here.
 - 2026-09-29: Hosting migration to Vercel + Turso: T1, T2, T2b (code) and T3 (docs) done on `feat/vercel-migration`; Webflow Cloud/D1 tooling removed. Next: T4 (provision Turso, env vars, remote migration, first deploy and smoke test; owner-authorized), then update the public URL here and in the README.
+- 2026-09-29: Phase 7 T4 done. Vercel project `barasa/lab21` created and linked; Turso `lab21-db` (Starter plan) provisioned via the Vercel Marketplace, injecting `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` in all environments; `COMMAND_CODE_MODEL` and secret `COMMAND_CODE_API_KEY` set for production; migrations applied to Turso; production deploy live at https://lab21-nine.vercel.app/. Smoke: home, `/api/health` (Turso write+read), `/api/daily`, `/api/stats`, `/api/coach/usage` all 200; live coach stream 200 with quota 19/20. Added `.vercelignore` for local tooling. GitHub auto-deploy not connected (Vercel account lacks a GitHub login connection); deploys run via `vercel deploy --prod`.
