@@ -20,6 +20,28 @@ describe("cardDealMotion", () => {
     expect(cardDealMotion(null, 2).animate).toEqual({ x: 0, y: 0, rotate: 0, scale: 1, opacity: 1 });
   });
 
+  it.each([
+    ["narrow mobile", 57, 83],
+    ["mobile", 63, 91],
+    ["desktop", 88, 120],
+  ])("keeps the %s deal inside its resting horizontal lane and below its top edge", (_, width, height) => {
+    const initial = cardDealMotion(false, 4).initial;
+    if (initial === false) throw new Error("A new card must animate into place");
+
+    const radians = initial.rotate * Math.PI / 180;
+    const animatedWidth = initial.scale * (
+      width * Math.abs(Math.cos(radians)) + height * Math.abs(Math.sin(radians))
+    );
+    const animatedHeight = initial.scale * (
+      width * Math.abs(Math.sin(radians)) + height * Math.abs(Math.cos(radians))
+    );
+
+    // The rightmost card has no spare space beside the fan on a narrow stage.
+    // Staying inside its resting lane also prevents crossing over the coach.
+    expect(Math.abs(initial.x) + animatedWidth / 2).toBeLessThanOrEqual(width / 2);
+    expect(initial.y + (height - animatedHeight) / 2).toBeGreaterThanOrEqual(0);
+  });
+
   it("skips the deal animation when the player prefers reduced motion", () => {
     expect(cardDealMotion(true, 3).transition).toEqual({ duration: 0 });
   });

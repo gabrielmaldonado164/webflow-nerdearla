@@ -1,4 +1,6 @@
-const DEAL_FROM_SHOE = { x: 125, y: -75, rotate: 23, scale: 0.8, opacity: 1 };
+// Reveal each card close to its table position. A fixed journey from the
+// shoe crosses the coach and can leave the stage for cards on the right edge.
+const DEAL_ON_TABLE = { x: 0, y: 12, rotate: -6, scale: 0.8, opacity: 1 };
 const AT_REST = { x: 0, y: 0, rotate: 0, scale: 1, opacity: 1 };
 
 /**
@@ -18,7 +20,7 @@ export function cardDealMotion(
   { alreadyDealt = false }: { alreadyDealt?: boolean } = {},
 ) {
   return {
-    initial: alreadyDealt ? (false as const) : DEAL_FROM_SHOE,
+    initial: alreadyDealt ? (false as const) : DEAL_ON_TABLE,
     animate: AT_REST,
     transition: reduceMotion
       ? { duration: 0 }
