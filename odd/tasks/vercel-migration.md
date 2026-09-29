@@ -26,6 +26,7 @@ The owner wants the web published on Vercel. Vercel has no D1, so persistence mu
 ## Tasks
 - [x] T1 — DB layer on libSQL: `src/db/client.ts` uses `@libsql/client` + `drizzle-orm/libsql` with `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` (cached client); port `src/coach/rateLimit.ts` to libSQL (`execute` + `rowsAffected`) test-first; coach routes read `process.env` instead of `getCloudflareContext`. Route: delegated (writer trigger, 4+ non-trivial files).
 - [x] T2 — Remove Cloudflare/Webflow Cloud tooling: `open-next.config.ts`, `wrangler.json`, `cloudflare-env.d.ts`, `webflow.json`, `cf:*` scripts, `@opennextjs/cloudflare`, `wrangler`, `@cloudflare/workers-types`; `drizzle.config.ts` dialect `turso` + `db:migrate` via drizzle-kit; `.env.example`. Route: delegated with T1 context.
+- [ ] T2b — Review follow-ups (owner-accepted): fail fast in production when `TURSO_DATABASE_URL` is missing (local file fallback only outside production); share one env resolver between runtime and `drizzle.config.ts` so empty strings behave the same and `db:migrate` never silently targets the local file when a remote is intended; add a real in-memory libSQL test for the rate limiter. Route: delegated (writer trigger).
 - [ ] T3 — Docs: README, CLAUDE.md, docs/ROADMAP.md deploy sections point to Vercel + Turso. Route: delegated.
 - [ ] T4 — Provision and deploy (owner-authorized remote work): Turso DB via Vercel Marketplace, env vars, remote migration, first Vercel deploy, smoke test. Route: inline with owner.
 
@@ -42,4 +43,4 @@ The owner wants the web published on Vercel. Vercel has no D1, so persistence mu
 - Engram mirror pending: mem_save refused (multiple active sessions for the project).
 
 ## Next Step
-T3 (docs), then T4 with owner authorization.
+T2b, then T3 (docs), then T4 with owner authorization.
