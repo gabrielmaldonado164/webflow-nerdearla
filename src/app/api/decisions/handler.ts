@@ -4,7 +4,7 @@
  * player id, structural + domain validation, and persistence — lives
  * here, behind injected dependencies (`DecisionHandlerDeps`), so it's
  * unit-testable with fakes instead of a real Next.js `Request`,
- * `cookies()`, or D1 binding. `route.ts` is a thin adapter that wires
+ * `cookies()`, or database. `route.ts` is a thin adapter that wires
  * these deps to the real runtime and turns the result into a `Response`.
  *
  * Never returns `error.message` or a stack for a repository failure

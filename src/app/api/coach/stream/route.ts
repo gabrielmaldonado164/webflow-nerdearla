@@ -1,19 +1,18 @@
 /**
  * POST /api/coach/stream — thin adapter wiring the real Next.js runtime
- * (`Request`, `cookies()`, D1, Cloudflare env, the AI provider) to
+ * (`Request`, `cookies()`, libSQL, `process.env`, the AI provider) to
  * `handleCoachStreamRequest`, which holds all the actual logic and is
  * unit-tested with fakes (Phase 5 T2b). This file only reads the raw
- * body text, reads/writes the real cookie jar, resolves the Cloudflare
- * env, and turns the handler's plain result into a `Response` — JSON for
+ * body text, reads/writes the real cookie jar, reads the
+ * coach env vars, and turns the handler's plain result into a `Response` — JSON for
  * an error, a `text/plain` `ReadableStream` for a successful stream.
  */
 
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { cookies } from "next/headers";
 
 import { startCoachStream } from "@/coach/stream";
 import { getCoachUsage, releaseCoachCall, reserveCoachCall } from "@/coach/rateLimit";
-import { getDb } from "@/db/client";
+import { getDb, getLibsqlClient } from "@/db/client";
 import { ensurePlayer } from "@/db/decisionsRepository";
 import { PLAYER_COOKIE_NAME, resolvePlayerId } from "@/player/playerCookie";
 
@@ -21,32 +20,15 @@ import { handleCoachStreamRequest, type CoachProviderConfig } from "./handler";
 
 export const runtime = "nodejs";
 
-interface CoachEnv {
-  DB: D1Database;
-  COMMAND_CODE_API_KEY?: string;
-  COMMAND_CODE_MODEL?: string;
-}
-
-/** Resolves the Cloudflare env once per request; `null` means unavailable. */
-function resolveEnv(): CoachEnv | null {
-  try {
-    return getCloudflareContext().env as CoachEnv;
-  } catch (error) {
-    // `next dev` has no D1 context unless explicitly initialized. The
-    // coach must degrade to the built-in explanation, not an HTML 500.
-    console.error("Coach runtime unavailable:", error);
-    return null;
-  }
-}
-
 export async function POST(request: Request): Promise<Response> {
   const rawBody = await request.text();
   const cookieStore = await cookies();
-  const env = resolveEnv();
 
   const getProviderConfig = (): CoachProviderConfig | null => {
-    if (!env?.COMMAND_CODE_API_KEY || !env.COMMAND_CODE_MODEL) return null;
-    return { apiKey: env.COMMAND_CODE_API_KEY, model: env.COMMAND_CODE_MODEL };
+    const apiKey = process.env.COMMAND_CODE_API_KEY;
+    const model = process.env.COMMAND_CODE_MODEL;
+    if (!apiKey || !model) return null;
+    return { apiKey, model };
   };
 
   const result = await handleCoachStreamRequest(rawBody, {
@@ -57,9 +39,9 @@ export async function POST(request: Request): Promise<Response> {
     getProviderConfig,
     repo: {
       ensurePlayer: (playerId) => ensurePlayer(getDb(), playerId),
-      reserveCoachCall: (playerId, date) => reserveCoachCall(env!.DB, playerId, date),
-      releaseCoachCall: (playerId, date) => releaseCoachCall(env!.DB, playerId, date),
-      getCoachUsage: (playerId, date) => getCoachUsage(env!.DB, playerId, date),
+      reserveCoachCall: (playerId, date) => reserveCoachCall(getLibsqlClient(), playerId, date),
+      releaseCoachCall: (playerId, date) => releaseCoachCall(getLibsqlClient(), playerId, date),
+      getCoachUsage: (playerId, date) => getCoachUsage(getLibsqlClient(), playerId, date),
     },
     startCoachStream,
   });

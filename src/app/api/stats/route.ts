@@ -1,6 +1,6 @@
 /**
  * GET /api/stats — thin adapter wiring the real Next.js runtime
- * (`cookies()`, D1) to `handleStatsRequest`, which holds all the actual
+ * (`cookies()`, libSQL) to `handleStatsRequest`, which holds all the actual
  * logic and is unit-tested with fakes (Phase 3 T1). This file only
  * reads the real cookie jar and turns the handler's plain result into a
  * `Response`. Never sets a cookie.

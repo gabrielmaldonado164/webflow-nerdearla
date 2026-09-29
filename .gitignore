@@ -55,3 +55,6 @@ worker-configuration.d.ts
 .codegraph/
 # webflow cli build artifacts
 next.config.webflow.ts
+
+# local libSQL database (dev)
+local.db*

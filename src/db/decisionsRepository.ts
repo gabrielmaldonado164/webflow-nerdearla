@@ -1,5 +1,5 @@
 /**
- * D1-backed adapter for the `DecisionRepository` interface `recordDecision`
+ * libSQL-backed adapter for the `DecisionRepository` interface `recordDecision`
  * (src/player/recordDecision.ts) is written against, plus a helper to
  * insert-if-missing the anonymous player row for `POST /api/decisions`,
  * and `listPlayerDecisions` to read a player's decision history back for
@@ -32,7 +32,7 @@ export interface DecisionInsertValues {
 }
 
 /**
- * Pure mapping from a domain `DecisionRow` to the D1 `decisions` table's
+ * Pure mapping from a domain `DecisionRow` to the `decisions` table's
  * insert shape: JSON-encodes the structured `playerCards`/`dealerUpcard`/
  * `availableActions` fields into the table's text columns, and passes
  * everything else through unchanged.
@@ -95,7 +95,7 @@ export function decisionRowFromSelectValues(values: DecisionSelectValues): Decis
   };
 }
 
-export function createD1DecisionRepository(db: Db): DecisionRepository {
+export function createDecisionRepository(db: Db): DecisionRepository {
   return {
     async insertDecision(row: DecisionRow) {
       await db.insert(decisions).values(decisionRowToInsertValues(row));

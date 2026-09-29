@@ -3,7 +3,7 @@
  * `src/app/api/stats/handler.ts`: all the actual logic — validating the
  * cookie and reading today's coach usage — lives here behind injected
  * dependencies (`CoachUsageHandlerDeps`), unit-testable with fakes
- * instead of a real Next.js `Request`/`cookies()`/D1 binding. `route.ts`
+ * instead of a real Next.js `Request`/`cookies()`/database. `route.ts`
  * is a thin adapter wiring these deps to the real runtime.
  *
  * Never mints or sets a cookie: an absent or invalid cookie means there

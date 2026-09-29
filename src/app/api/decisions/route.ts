@@ -1,6 +1,6 @@
 /**
  * POST /api/decisions — thin adapter wiring the real Next.js runtime
- * (`Request`, `cookies()`, D1) to `handleDecisionRequest`, which holds
+ * (`Request`, `cookies()`, libSQL) to `handleDecisionRequest`, which holds
  * all the actual logic and is unit-tested with fakes (Phase 2b T4).
  * This file only reads the raw body text, reads/writes the real cookie
  * jar, and turns the handler's plain result into a `Response`.
@@ -9,7 +9,7 @@
 import { cookies } from "next/headers";
 
 import { getDb } from "@/db/client";
-import { createD1DecisionRepository, ensurePlayer } from "@/db/decisionsRepository";
+import { createDecisionRepository, ensurePlayer } from "@/db/decisionsRepository";
 import { PLAYER_COOKIE_NAME } from "@/player/playerCookie";
 import { generatePlayerId } from "@/player/playerId";
 
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     secure: process.env.NODE_ENV === "production",
     repo: {
       ensurePlayer: (playerId) => ensurePlayer(getDb(), playerId),
-      insertDecision: (row) => createD1DecisionRepository(getDb()).insertDecision(row),
+      insertDecision: (row) => createDecisionRepository(getDb()).insertDecision(row),
     },
   });
 

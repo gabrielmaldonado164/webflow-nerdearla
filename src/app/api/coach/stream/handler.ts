@@ -4,7 +4,7 @@
  * and (on failure) refunding a daily quota slot, and driving the provider
  * stream — lives here behind injected dependencies
  * (`CoachStreamHandlerDeps`), unit-testable with fakes instead of a real
- * Next.js `Request`/`cookies()`/D1/Cloudflare binding. `route.ts` is a
+ * Next.js `Request`/`cookies()`/database/env. `route.ts` is a
  * thin adapter wiring these deps to the real runtime and turning the
  * result into a `Response` (JSON for an error, a `ReadableStream` for a
  * successful stream).

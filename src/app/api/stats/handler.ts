@@ -4,7 +4,7 @@
  * the player's decision history, and computing stats/achievements —
  * lives here behind injected dependencies (`StatsHandlerDeps`),
  * unit-testable with fakes instead of a real Next.js
- * `Request`/`cookies()`/D1 binding. `route.ts` is a thin adapter wiring
+ * `Request`/`cookies()`/database. `route.ts` is a thin adapter wiring
  * these deps to the real runtime.
  *
  * Never mints or sets a cookie (unlike `POST /api/decisions`): an

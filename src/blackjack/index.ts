@@ -1,7 +1,7 @@
 /**
  * Public API of the blackjack domain engine. Pure TypeScript, no
  * framework imports — safe to use from any runtime, including
- * Cloudflare Workers.
+ * serverless runtimes.
  */
 
 export type { Card, Rank, Suit } from "./cards";
