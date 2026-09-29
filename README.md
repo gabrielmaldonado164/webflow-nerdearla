@@ -2,7 +2,7 @@
 
 **Learn blackjack strategy by playing, not by reading.**
 
-Live: https://lab21-nine.vercel.app/ (Vercel + Turso). The previous Webflow Cloud deployment at https://lab21.webflow.io/ is being retired.
+Live: https://lab21-nine.vercel.app/ (Vercel + Turso). The previous Webflow Cloud deployment (https://lab21.webflow.io/) was archived on 2026-09-29.
 
 21 Lab is an educational blackjack strategy trainer. You play real hands against a dealer, and every decision is graded against a deterministic basic-strategy engine — not a model's guess. There is no real money, no betting, and no chips: it's a training tool, not a casino. An AI coach can explain *why* a move was right or wrong, backed by the same engine and by simulated expected value, and the app works fully even when the AI is unavailable.
 
