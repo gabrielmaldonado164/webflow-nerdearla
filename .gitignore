@@ -51,6 +51,7 @@ next-env.d.ts
 .codegraph/
 # webflow cli build artifacts
 next.config.webflow.ts
+/dist/
 
 # local libSQL database (dev)
 local.db*
