@@ -12,7 +12,7 @@ Educational blackjack trainer for the Nerdearla 2026 Webflow App Challenge.
 - Strategy is decided by the deterministic engine in `src/blackjack`, never by the LLM.
 - The Command Code API key is server-side only.
 - The app must work without the AI.
-- Do not set `basePath` or `assetPrefix` in the Next.js config (Webflow Cloud injects them).
+- Hosting is Vercel and persistence is Turso (libSQL) via `drizzle-orm/libsql`. Do not reintroduce Cloudflare/OpenNext/D1 tooling; production requires `TURSO_DATABASE_URL`.
 - Domain code (`src/blackjack`, `src/training`) is pure TypeScript and developed test-first.
 - Keep the app deployable after every phase. Feature freeze Friday 12:00 ART.
 

@@ -2,7 +2,7 @@
 
 **Learn blackjack strategy by playing, not by reading.**
 
-Live: **https://lab21.webflow.io/**
+Live: the Webflow Cloud deployment at https://lab21.webflow.io/ is being retired. The app now targets Vercel; the public Vercel URL is pending and will be added here once the first deploy is done.
 
 21 Lab is an educational blackjack strategy trainer. You play real hands against a dealer, and every decision is graded against a deterministic basic-strategy engine — not a model's guess. There is no real money, no betting, and no chips: it's a training tool, not a casino. An AI coach can explain *why* a move was right or wrong, backed by the same engine and by simulated expected value, and the app works fully even when the AI is unavailable.
 
@@ -16,7 +16,7 @@ Built for the Nerdearla 2026 Webflow App Challenge (target categories: Best Tech
 
 ## Try it in 30 seconds
 
-1. Open https://lab21.webflow.io/ — you're already at the table, no sign-up, no landing page.
+1. Open the live app (URL pending, see above) — you're already at the table, no sign-up, no landing page.
 2. Play a hand: pick hit, stand, double, or split. You get instant feedback ("Perfect move" / "Not quite").
 3. Tap **Skill Map** to see your accuracy by hand type, streaks, and badges.
 4. Tap **Daily Challenge** for a fixed ten-hand set that's the same for everyone that day.
@@ -49,20 +49,20 @@ Built for the Nerdearla 2026 Webflow App Challenge (target categories: Best Tech
 
 **Coach quota is atomic and fair.** `reserveCoachCall()` (`src/coach/rateLimit.ts`) does a single conditional upsert in SQLite (`INSERT ... ON CONFLICT DO UPDATE SET count = count + 1 WHERE count < limit`), so concurrent requests from the same player can't over-spend the daily limit. If the provider fails before any text is streamed, `releaseCoachCall()` refunds the reserved question, and `GET /api/coach/usage` powers a visible remaining-questions counter.
 
-**Daily Challenge is deterministic and tamper-resistant.** Each of the ten hands is generated from a per-hand seed derived from `daily-v1:<date>:<index>` (`generateDailyScenarios` in `src/training/dailyChallenge.ts`), persisted once in D1 as the canonical set for that day, and graded server-side against that exact set. Results are stored with `onConflictDoNothing()` — the first submitted result for a player/day wins (`src/db/dailyRepository.ts`).
+**Daily Challenge is deterministic and tamper-resistant.** Each of the ten hands is generated from a per-hand seed derived from `daily-v1:<date>:<index>` (`generateDailyScenarios` in `src/training/dailyChallenge.ts`), persisted once in the database as the canonical set for that day, and graded server-side against that exact set. Results are stored with `onConflictDoNothing()` — the first submitted result for a player/day wins (`src/db/dailyRepository.ts`).
 
 **No accounts, no PII.** Players are identified only by a long-lived, `httpOnly` UUID cookie (`lab_player`); a tampered or missing cookie is treated as absent and a fresh id is minted, never trusted as-is (`src/player/playerCookie.ts`).
 
-**The provider key never reaches the client.** `COMMAND_CODE_API_KEY` is a Webflow Cloud secret environment variable, read only inside server-side route handlers.
+**The provider key never reaches the client.** `COMMAND_CODE_API_KEY` is a server-side environment variable (a Vercel project secret in production), never exposed with a `NEXT_PUBLIC_` prefix and read only inside server-side route handlers.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Browser -->|HTTPS| Worker["Next.js 16 on Webflow Cloud\n(Cloudflare Workers via OpenNext)"]
+    Browser -->|HTTPS| Worker["Next.js 16 on Vercel\n(Node.js runtime)"]
     Worker --> Routes["API routes (thin adapters)\nsrc/app/api/*"]
     Routes --> Domain["Domain\nsrc/blackjack, src/training,\nsrc/player, src/coach"]
-    Domain --> DB[("D1 via Drizzle\nsrc/db")]
+    Domain --> DB[("Turso (libSQL) via Drizzle\nsrc/db")]
     Routes --> Coach["Coach provider client"]
     Coach -->|OpenAI-compatible, Vercel AI SDK| CommandCode["Command Code\n(server-side key)"]
 ```
@@ -73,7 +73,7 @@ flowchart LR
 | `src/training/` | Scenario generation, adaptive weighting, Daily Challenge seeding and grading. |
 | `src/player/` | Anonymous identity, decision recording, stats, achievements. |
 | `src/coach/` | LLM client, tool definitions, prompt, rate limiting. |
-| `src/db/` | Drizzle schema and D1 repositories. |
+| `src/db/` | Drizzle schema and libSQL repositories. |
 | `src/app/` | Routes, UI, and API route handlers — validate input, call the domain, persist, respond. |
 | `src/features/` | Client-side UI: the pixel-art casino screen and the practice session hook. |
 
@@ -84,9 +84,9 @@ flowchart LR
 | Layer | Choice | Version |
 |---|---|---|
 | Framework | Next.js (App Router) | 16.3.6 |
-| Runtime | Cloudflare Workers via OpenNext | `@opennextjs/cloudflare` 1.20.6 |
-| Database | Cloudflare D1 (SQLite) | via `wrangler` 4.137.0 |
-| ORM | Drizzle | `drizzle-orm` 0.45.3 |
+| Hosting | Vercel (Node.js runtime) | Git integration or `vercel` CLI |
+| Database | Turso (libSQL, SQLite-compatible) | `@libsql/client` 0.18 |
+| ORM | Drizzle (`drizzle-orm/libsql`) | `drizzle-orm` 0.45.3 |
 | AI | Vercel AI SDK + OpenAI-compatible provider | `ai` 7.0.113, `@ai-sdk/openai-compatible` 3.0.55 |
 | UI | React, Tailwind CSS, Motion, Phosphor Icons | React 19.2.8, Tailwind 4 |
 | Validation | Zod | 4.6.5 |
@@ -98,22 +98,35 @@ flowchart LR
 ```bash
 npm install
 npm test          # Vitest unit suite
-npm run dev        # Next.js dev server (no D1/Cloudflare context — coach and persistence degrade)
 ```
 
-For the full runtime, including D1 and the coach:
+Persistence uses libSQL. Outside production the app falls back to a local `file:local.db`, so no Turso account is needed for development. Create the local schema once, then start the dev server:
 
 ```bash
-npm run db:migrate:local   # apply Drizzle migrations to the local D1 database
-npm run cf:preview          # build with OpenNext and preview under Wrangler
+npm run db:migrate:local   # apply Drizzle migrations to file:local.db
+npm run dev
 ```
 
-Environment variables (Webflow Cloud secrets/vars, not committed):
+Copy `.env.example` to `.env.local` for local values (never commit real ones).
+
+Environment variables:
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `COMMAND_CODE_API_KEY` | For AI features | Server-side secret for the Command Code provider |
+| `TURSO_DATABASE_URL` | In production | libSQL database URL. Locally it is optional (falls back to `file:local.db`); in production a missing value throws a clear error (`src/db/config.ts`) |
+| `TURSO_AUTH_TOKEN` | For a remote Turso database | Auth token for the Turso database |
+| `COMMAND_CODE_API_KEY` | For AI features | Server-side secret for the Command Code provider. Without it the coach returns 503 and the app falls back to template explanations |
 | `COMMAND_CODE_MODEL` | Optional | Model id passed to the OpenAI-compatible client |
+
+Applying migrations to a remote database:
+
+```bash
+export TURSO_DATABASE_URL=libsql://<database>.turso.io
+export TURSO_AUTH_TOKEN=<token>
+npm run db:migrate
+```
+
+`npm run db:migrate` reads the variables from the shell only; it does not load `.env.local`. To reuse the values stored in Vercel, run `vercel env pull .env.local` and export them from that file. `npm run db:generate` always pins a local URL, so generating a migration never touches a remote database.
 
 ## Testing
 
@@ -127,13 +140,12 @@ Observed: **563 tests passing** across 56 test files.
 
 ## Deploy
 
-Deployed to Webflow Cloud (Cloudflare Workers), D1 migrations applied automatically on deploy:
+Hosted on Vercel (Next.js on the Node.js runtime), with persistence on Turso. Deploy through the Vercel Git integration (push to the connected branch) or with the `vercel` CLI.
 
-```bash
-npx @webflow/webflow-cli apps deploy --no-input --site-id <site-id> --mount / --environment main --skip-mount-path-check --skip-update-check
-```
-
-`basePath` / `assetPrefix` are intentionally left unset in the Next.js config — Webflow Cloud injects the mount path at build time.
+1. Create a Turso database. The [Turso Vercel Marketplace integration](https://vercel.com/marketplace/tursocloud) can provision it and inject the database URL and token into the project. It may prefix the variable names, so verify them and match `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` (add aliases if needed).
+2. In the Vercel project, open Settings → Environment Variables and set `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `COMMAND_CODE_API_KEY`, and optionally `COMMAND_CODE_MODEL` for the Production, Preview, and Development environments as needed. The API key stays server-side.
+3. Apply the migrations to the remote database (see "Applying migrations to a remote database" above). Migrations are not run automatically on deploy.
+4. Deploy.
 
 ## Decisions & scope
 
@@ -152,4 +164,4 @@ npx @webflow/webflow-cli apps deploy --no-input --site-id <site-id> --mount / --
 
 ---
 
-Built for the Nerdearla 2026 Webflow App Challenge. Independent project — not affiliated with Webflow beyond using its platform.
+Built for the Nerdearla 2026 Webflow App Challenge. Independent project — not affiliated with Webflow.

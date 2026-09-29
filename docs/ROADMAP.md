@@ -5,7 +5,7 @@
 
 ## 1. Goal
 
-Ship **21 Lab**, an educational blackjack trainer ("Learn blackjack by playing, not by reading"), as a full-stack app deployed on Webflow Cloud, and submit it before the deadline.
+Ship **21 Lab**, an educational blackjack trainer ("Learn blackjack by playing, not by reading"), as a full-stack app, and submit it before the deadline (built and submitted on Webflow Cloud; hosting moved to Vercel + Turso on 2026-09-29, see section 2).
 
 - **Deadline:** Fri 2026-09-25, 18:00 ART (hard). Winners announced Sat 2026-09-26, 12:00 ART.
 - **Submit at:** https://nerdearla-app-showcase.webflow.io/#submit (GitHub user + public app URL + short description).
@@ -21,21 +21,21 @@ Ship **21 Lab**, an educational blackjack trainer ("Learn blackjack by playing, 
 - Judged by Webflow engineers. No rubric is published.
 - Prize eligibility requires attending the event in person or being in Buenos Aires during the challenge.
 
-### Webflow Cloud platform
-- Runtime: **Cloudflare Workers** (V8 isolates, not full Node.js).
-- Next.js **>= 15** (project uses 16.3), built through OpenNext (`@opennextjs/cloudflare`).
-- **Do not set `basePath` or `assetPrefix`.** Webflow Cloud injects the mount path at build time. Use `process.env.NEXT_PUBLIC_BASE_PATH` for plain `<img>` tags and manual `fetch` calls. `Link` and `next/image` handle it automatically.
-- API routes: use `export const runtime = "nodejs"`. **Not `edge`**: the Webflow docs say `edge`, but on Next 16.3 + `@opennextjs/cloudflare` 1.20 it builds and then returns 500 at runtime (verified 2026-09-23).
-- SQLite = **Cloudflare D1**, declared in `wrangler.json` under `d1_databases` (`binding`, `database_name`, `database_id`, `migrations_dir`). Migrations are applied automatically on deploy.
-- Access bindings via `getCloudflareContext()`, always called inside a function.
-- ORM: **Drizzle**.
-- Limits: 20 s request timeout, 30 s CPU, 128 MB memory, 10 MB worker bundle, 100 MB SQLite on the free plan.
-- CLI: `npx @webflow/webflow-cli` (v2.8.0). Commands: `webflow auth login`, `webflow cloud deploy`.
+### Hosting and persistence (Vercel + Turso, since 2026-09-29)
+- Hosting: **Vercel**, Next.js 16.3 on the Node.js runtime. Deploy through the Git integration or the `vercel` CLI. API routes keep `export const runtime = "nodejs"`.
+- Database: **Turso (libSQL)** through `@libsql/client` and `drizzle-orm/libsql`. The Drizzle schema and the `drizzle/` migrations are unchanged from the D1 era (both are SQLite).
+- Environment variables (`.env.example`): `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `COMMAND_CODE_API_KEY`, `COMMAND_CODE_MODEL`. Set them in Vercel Project → Settings → Environment Variables. The Turso Vercel Marketplace integration (https://vercel.com/marketplace/tursocloud) can inject the database URL and token; it may prefix the names, so verify and match them.
+- Local dev: `npm run db:migrate:local`, then `npm run dev`. Outside production the app falls back to `file:local.db`; in production a missing `TURSO_DATABASE_URL` throws (`src/db/config.ts`).
+- Remote migrations are manual: `npm run db:migrate` needs `TURSO_DATABASE_URL` (and `TURSO_AUTH_TOKEN`) exported in the shell and does not read `.env.local` (tip: `vercel env pull .env.local`, then export). `db:generate` pins a local URL.
+- Removed: `cf:*` scripts, `wrangler`, OpenNext, `webflow.json`, D1.
+- **Live URL:** the Vercel URL is pending (T4 of `odd/tasks/vercel-migration.md`). The Webflow Cloud URL https://lab21.webflow.io/ (used in the challenge submission) is being retired.
+
+### Webflow Cloud platform (retired 2026-09-29, kept as history)
+Phases 0–6 were built and submitted on Webflow Cloud (Cloudflare Workers via OpenNext, D1 declared in `wrangler.json`, deployed with `npx @webflow/webflow-cli apps deploy`, site `6ab3f86d73c9861e8c44d38b`, environment `main`, mount `/`). That tooling has been removed; the notes below apply only to that era.
+- Runtime: Cloudflare Workers (V8 isolates, not full Node.js), Next.js >= 15 built through `@opennextjs/cloudflare`.
+- `basePath` / `assetPrefix` were left unset because Webflow Cloud injected the mount path; `process.env.NEXT_PUBLIC_BASE_PATH` helpers remain in the code and are harmless.
+- `runtime = "edge"` returned 500 on Next 16.3 + OpenNext 1.20 (verified 2026-09-23), so routes use `nodejs`.
 - Docs: https://developers.webflow.com/webflow-cloud/llms.txt
-- **Live URL:** https://lab21.webflow.io/ (renamed from `webflow-nerdearla.webflow.io` on 2026-09-24, which now returns 404; site `6ab3f86d73c9861e8c44d38b`, environment `main`, mount `/`). IDs are in `webflow.json`.
-- **Deploy command** (non-interactive; commit first so the version tag is clean):
-  `npx @webflow/webflow-cli apps deploy --no-input --site-id 6ab3f86d73c9861e8c44d38b --mount / --environment main --skip-mount-path-check --skip-update-check`
-- CLI deploy gotcha: it deletes `open-next.config.ts` and leaves `next.config.webflow.ts` behind. After each deploy, run `git restore open-next.config.ts` (the helper file is gitignored).
 
 ### LLM provider: Command Code (GOAT plan, API access confirmed)
 - Base URL: `https://api.commandcode.ai/provider/v1`, with OpenAI (`/chat/completions`, `/responses`) and Anthropic (`/messages`) formats.
@@ -52,8 +52,8 @@ Ship **21 Lab**, an educational blackjack trainer ("Learn blackjack by playing, 
 | D2 | Strategy is decided by a deterministic engine, never by the LLM | Correctness must be demonstrable |
 | D3 | The AI coach only calls tools backed by the engine (`get_optimal_action`, `simulate_ev`, `get_player_stats`) | "The AI never guesses, it runs the numbers" (Best Tech story) |
 | D4 | Anonymous players (UUID in a cookie); no auth | Zero friction: the judge plays within 30 s |
-| D5 | The LLM key stays server-side only (Webflow Cloud secret env var) | Prevents key abuse |
-| D6 | Per-player rate limit on coach calls, stored in D1 | The key is paid by the author |
+| D5 | The LLM key stays server-side only (server-side env var; a Vercel project secret in production) | Prevents key abuse |
+| D6 | Per-player rate limit on coach calls, stored in the database (Turso) | The key is paid by the author |
 | D7 | The app must work fully if the AI is unavailable | AI is an enhancement, not the core |
 | D8 | Open directly into a playable hand; no marketing landing page | "The game is the onboarding" |
 | D10 | Mobile-first Pixel Arcade: a 2.5D pixel-art casino room and dimensional felt table, still no money or chips | Owner selected the playable Pixel Arcade direction after rejecting flat and earlier mockups |
@@ -62,15 +62,15 @@ Ship **21 Lab**, an educational blackjack trainer ("Learn blackjack by playing, 
 ## 4. Architecture
 
 ```
-Webflow Cloud (Cloudflare Workers)
-└── Next.js 15 (App Router, TypeScript, Tailwind)
+Vercel (Node.js runtime)
+└── Next.js 16 (App Router, TypeScript, Tailwind)
     ├── src/blackjack/   # Pure domain: cards, hands, rules, strategy, Monte Carlo EV. No framework imports.
     ├── src/training/    # Scenario generation, adaptive weighting, daily challenge seed
     ├── src/player/      # Anonymous identity, stats, skill map
     ├── src/coach/       # LLM client, tool definitions, prompts, rate limit
-    ├── src/db/          # Drizzle schema + D1 access
+    ├── src/db/          # Drizzle schema + libSQL (Turso) access
     └── src/app/         # Routes, UI, API route handlers (thin adapters)
-D1 (SQLite): players, decisions, daily_challenges, daily_results, coach_usage
+Turso (libSQL): players, decisions, daily_challenges, daily_results, coach_usage
 ```
 
 Rules:
@@ -167,6 +167,14 @@ Goal: make 21 Lab feel like a web game, not a pretty page. Strategy grading stay
 - [x] Mobile QA, loading and error states, empty states
 - [x] Final production deploy + smoke test on the public URL
 
+### Phase 7 — Vercel + Turso migration (2026-09-29)
+Tracked in `odd/tasks/vercel-migration.md` on branch `feat/vercel-migration`.
+- [x] T1 — DB layer on libSQL (`@libsql/client` + `drizzle-orm/libsql`), rate limiter ported, coach routes read `process.env`
+- [x] T2 — Remove Cloudflare/Webflow Cloud tooling; `drizzle.config.ts` on the `turso` dialect
+- [x] T2b — Review follow-ups: fail fast without `TURSO_DATABASE_URL` in production, shared env resolver, real libSQL rate-limit test
+- [x] T3 — Docs (README, CLAUDE.md, this file) point to Vercel + Turso
+- [ ] T4 — Provision Turso via the Vercel Marketplace, set env vars, run the remote migration, first Vercel deploy, smoke test (owner-authorized remote work)
+
 ### Phase 6 — Submit (Fri 25, before 15:00 ART; buffer until 18:00)
 - [x] Submit the form: GitHub user, app URL, description (submitted 2026-09-25)
 - [x] README with a pitch, architecture, and tech highlights
@@ -224,3 +232,4 @@ Append one line per session: date, what was done, and what comes next.
 - 2026-09-25: Hole-card reveal re-played the deal from the shoe (swapping to `HoleCard` remounted both faces; measured +125px during the flip). Faces now start at rest via `cardDealMotion(..., { alreadyDealt: true })` (`c46f6ca`, test-first; 568/568). Review `review-b8e85decd05885ee` approved and acknowledged (suggestions only). Deployed with `--auto-publish` (`357025ef-a80f-4dcd-9be2-24b12032d286`); live: flip in place (0px face offset), `/api/decisions` 201, no console errors.
 - 2026-09-25: Pushed the full chain and opened PRs (feature-branch-chain): draft tracker #1 `feat/21-lab` → `main` (empty tracker commit), children #2–#16 each targeting its parent branch; bodies carry Chain Context and the diagram. 11 of 15 slices exceed 400 changed lines; bodies request `size:exception` (already reviewed per work unit). Merge order: #2…#16 into the tracker, then #1 into `main` (owner decision).
 - 2026-09-25: Merged PRs #2–#16 into the tracker and #1 into `main` (`4221a0e`). Owner submitted the challenge form (GitHub `gabrielmaldonado164`, https://lab21.webflow.io/, short description). Phase 6 complete; only fixes from here.
+- 2026-09-29: Hosting migration to Vercel + Turso: T1, T2, T2b (code) and T3 (docs) done on `feat/vercel-migration`; Webflow Cloud/D1 tooling removed. Next: T4 (provision Turso, env vars, remote migration, first deploy and smoke test; owner-authorized), then update the public URL here and in the README.
