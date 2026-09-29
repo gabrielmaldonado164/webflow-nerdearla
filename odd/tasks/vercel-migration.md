@@ -38,6 +38,7 @@ The owner wants the web published on Vercel. Vercel has no D1, so persistence mu
 - 2026-09-29: branch created; coupling mapped; Turso confirmed on Vercel Marketplace (https://vercel.com/marketplace/tursocloud).
 - T1 done (delegated writer) — 1ebcad4 `refactor(db): move persistence from d1 to libsql`. RED: rateLimit.test.ts 5/5 failing before port. GREEN: npm test 568/568, tsc clean, eslint src clean.
 - T2 done (delegated writer) — ea22faa `chore(deploy): drop cloudflare and webflow cloud tooling`. `TURSO_DATABASE_URL=file:local.db npm run db:migrate` applied all migrations; rate-limit UPSERT checked on real libSQL (rowsAffected 1,1,0 at limit 2); npm test 568/568, tsc, lint, build clean; no Cloudflare imports remain. Parent spot check: vitest 568/568.
+- Review (RDD, medium, consent granted) review-003888c4a5042907 over 83bdfcf..3ad8c35: approved + acknowledged (authority burned). Advisory findings: silent `file:local.db` fallback in production (src/db/client.ts:17-20); drizzle.config `??` vs runtime `||` disagree on empty URL and db:migrate silently targets local file (drizzle.config.ts:8-9); rateLimit tests use a fake, no real libSQL SQL test. Reviewed boundary: 3ad8c35.
 - Engram mirror pending: mem_save refused (multiple active sessions for the project).
 
 ## Next Step
